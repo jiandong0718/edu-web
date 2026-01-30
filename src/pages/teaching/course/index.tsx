@@ -154,7 +154,7 @@ const styles = {
   },
 };
 
-export function Component() {
+function CourseList() {
   const [loading, setLoading] = useState(false);
 
   const columns: ColumnsType<Course> = [
@@ -234,7 +234,9 @@ export function Component() {
             showInfo={false}
             style={{ width: 60, marginBottom: 0 }}
           />
-          <span style={{ color: '#00d4ff', fontWeight: 500 }}>{count}</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.85)', marginLeft: 8 }}>
+            {count}
+          </span>
         </div>
       ),
     },
@@ -252,15 +254,25 @@ export function Component() {
             color: status === 'active' ? '#00ff88' : '#ff4d6a',
           }}
         >
-          {status === 'active' ? '开课中' : '已停课'}
+          {status === 'active' ? '启用' : '停用'}
         </Tag>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
+      width: 120,
+      render: (date: string) => (
+        <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{date}</span>
       ),
     },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       align: 'center',
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Tooltip title="查看详情">
@@ -275,7 +287,7 @@ export function Component() {
             <Button
               type="text"
               icon={<EditOutlined />}
-              style={{ color: '#ffaa00' }}
+              style={{ color: '#00ff88' }}
               onClick={() => message.info(`编辑: ${record.name}`)}
             />
           </Tooltip>
@@ -283,12 +295,6 @@ export function Component() {
       ),
     },
   ];
-
-  const stats = {
-    total: mockCourses.length,
-    active: mockCourses.filter((c) => c.status === 'active').length,
-    totalStudents: mockCourses.reduce((acc, c) => acc + c.studentCount, 0),
-  };
 
   const handleRefresh = () => {
     setLoading(true);
@@ -299,43 +305,51 @@ export function Component() {
   };
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
       <div style={styles.pageHeader}>
         <div style={styles.pageTitle}>
-          <ReadOutlined style={{ color: '#00d4ff' }} />
+          <ReadOutlined style={{ fontSize: 28, color: '#00d4ff' }} />
           课程管理
         </div>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} style={styles.actionButton}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={styles.actionButton}
+          >
             新增课程
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+            刷新
           </Button>
         </Space>
       </div>
 
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <div style={styles.statValue}>{stats.total}</div>
-          <div style={styles.statLabel}>全部课程</div>
+      <Card style={styles.card} bordered={false}>
+        <div style={styles.statsBar}>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>{mockCourses.length}</div>
+            <div style={styles.statLabel}>总课程数</div>
+          </div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              {mockCourses.filter((c) => c.status === 'active').length}
+            </div>
+            <div style={styles.statLabel}>启用课程</div>
+          </div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              {mockCourses.reduce((sum, c) => sum + c.studentCount, 0)}
+            </div>
+            <div style={styles.statLabel}>总学员数</div>
+          </div>
         </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#00ff88' }}>{stats.active}</div>
-          <div style={styles.statLabel}>开课中</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#ffaa00' }}>{stats.totalStudents}</div>
-          <div style={styles.statLabel}>总学员数</div>
-        </div>
-      </div>
 
-      <Card style={styles.card} bodyStyle={{ padding: 20 }}>
         <div style={styles.filterBar}>
           <Input
-            placeholder="搜索课程名称..."
-            prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
-            style={{ width: 300 }}
-            allowClear
+            placeholder="搜索课程名称"
+            prefix={<SearchOutlined />}
+            style={{ width: 280 }}
           />
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
@@ -350,10 +364,13 @@ export function Component() {
           pagination={{
             total: mockCourses.length,
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
           }}
         />
       </Card>
     </div>
   );
 }
+
+export default CourseList;

@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import BasicLayout from '@/layouts/BasicLayout';
-import Login from '@/pages/login';
+import Login from '@/pages/login/index';
 
 const router = createBrowserRouter([
   {
@@ -17,7 +17,9 @@ const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        lazy: () => import('@/pages/dashboard'),
+        lazy: async () => ({
+          Component: (await import('@/pages/dashboard')).default
+        }),
       },
       // 系统管理
       {
@@ -25,23 +27,33 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'user',
-            lazy: () => import('@/pages/system/user'),
+            lazy: async () => ({
+              Component: (await import('@/pages/system/user')).default
+            }),
           },
           {
             path: 'role',
-            lazy: () => import('@/pages/system/role'),
+            lazy: async () => ({
+              Component: (await import('@/pages/system/role')).default
+            }),
           },
           {
             path: 'menu',
-            lazy: () => import('@/pages/system/menu'),
+            lazy: async () => ({
+              Component: (await import('@/pages/system/menu')).default
+            }),
           },
           {
             path: 'campus',
-            lazy: () => import('@/pages/system/campus'),
+            lazy: async () => ({
+              Component: (await import('@/pages/system/campus')).default
+            }),
           },
           {
             path: 'dict',
-            lazy: () => import('@/pages/system/dict'),
+            lazy: async () => ({
+              Component: (await import('@/pages/system/dict')).default
+            }),
           },
         ],
       },
@@ -51,11 +63,27 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'list',
-            lazy: () => import('@/pages/student/list'),
+            lazy: async () => ({
+              Component: (await import('@/pages/student/list')).default
+            }),
           },
           {
             path: 'profile/:id',
-            lazy: () => import('@/pages/student/profile'),
+            lazy: async () => ({
+              Component: (await import('@/pages/student/profile')).default
+            }),
+          },
+          {
+            path: 'tag',
+            lazy: async () => ({
+              Component: (await import('@/pages/student/tag')).default
+            }),
+          },
+          {
+            path: 'import',
+            lazy: async () => ({
+              Component: (await import('@/pages/student/import')).default
+            }),
           },
         ],
       },
@@ -64,20 +92,46 @@ const router = createBrowserRouter([
         path: 'teaching',
         children: [
           {
+            path: 'teacher',
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/teacher')).default
+            }),
+          },
+          {
+            path: 'teacher/:id',
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/teacher/Detail')).default
+            }),
+          },
+          {
             path: 'course',
-            lazy: () => import('@/pages/teaching/course'),
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/course')).default
+            }),
+          },
+          {
+            path: 'course-category',
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/courseCategory')).default
+            }),
           },
           {
             path: 'class',
-            lazy: () => import('@/pages/teaching/class'),
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/class')).default
+            }),
           },
           {
             path: 'schedule',
-            lazy: () => import('@/pages/teaching/schedule'),
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/schedule')).default
+            }),
           },
           {
             path: 'attendance',
-            lazy: () => import('@/pages/teaching/attendance'),
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/attendance')).default
+            }),
           },
         ],
       },
@@ -87,15 +141,21 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'contract',
-            lazy: () => import('@/pages/finance/contract'),
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/contract')).default
+            }),
           },
           {
             path: 'payment',
-            lazy: () => import('@/pages/finance/payment'),
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/payment')).default
+            }),
           },
           {
             path: 'consumption',
-            lazy: () => import('@/pages/finance/consumption'),
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/consumption')).default
+            }),
           },
         ],
       },
@@ -105,15 +165,33 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'lead',
-            lazy: () => import('@/pages/marketing/lead'),
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/lead')).default
+            }),
+          },
+          {
+            path: 'lead-import',
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/lead-import')).default
+            }),
+          },
+          {
+            path: 'lead-assign',
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/lead-assign')).default
+            }),
           },
           {
             path: 'follow',
-            lazy: () => import('@/pages/marketing/follow'),
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/follow')).default
+            }),
           },
           {
             path: 'trial',
-            lazy: () => import('@/pages/marketing/trial'),
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/trial')).default
+            }),
           },
         ],
       },

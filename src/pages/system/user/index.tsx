@@ -17,7 +17,6 @@ import {
   DeleteOutlined,
   UserOutlined,
   ReloadOutlined,
-  SafetyOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -102,7 +101,7 @@ const styles = {
   },
 };
 
-export function Component() {
+export default function Component() {
   const [loading, setLoading] = useState(false);
 
   const columns: ColumnsType<User> = [
@@ -236,26 +235,33 @@ export function Component() {
   };
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
       <div style={styles.pageHeader}>
         <div style={styles.pageTitle}>
-          <SafetyOutlined style={{ color: '#00d4ff' }} />
+          <UserOutlined style={{ fontSize: 28, color: '#00d4ff' }} />
           用户管理
         </div>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} style={styles.actionButton}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={styles.actionButton}
+            onClick={() => message.info('新增用户')}
+          >
             新增用户
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+            刷新
           </Button>
         </Space>
       </div>
 
-      <Card style={styles.card} bodyStyle={{ padding: 20 }}>
+      <Card style={styles.card} bordered={false}>
         <div style={styles.filterBar}>
           <Input
-            placeholder="搜索用户名、姓名、手机号..."
-            prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
-            style={{ width: 300 }}
-            allowClear
+            placeholder="搜索用户名、姓名"
+            prefix={<SearchOutlined />}
+            style={{ width: 280 }}
           />
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
@@ -270,7 +276,8 @@ export function Component() {
           pagination={{
             total: mockUsers.length,
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
           }}
         />
       </Card>

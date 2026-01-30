@@ -4,11 +4,11 @@ import {
   Table,
   Button,
   Input,
+  InputNumber,
   Select,
   Space,
   Tag,
   Avatar,
-  Dropdown,
   Modal,
   Form,
   Row,
@@ -16,24 +16,22 @@ import {
   DatePicker,
   message,
   Tooltip,
-  Badge,
 } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
   FilterOutlined,
-  MoreOutlined,
   UserOutlined,
-  PhoneOutlined,
-  MailOutlined,
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   ExportOutlined,
   ReloadOutlined,
   TeamOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { StudentBatchImport } from '@/components/StudentBatchImport';
 
 // 学生数据类型
 interface Student {
@@ -198,10 +196,11 @@ const statusConfig = {
   suspended: { color: '#ffaa00', text: '休学', bg: 'rgba(255, 170, 0, 0.1)' },
 };
 
-export function Component() {
+function StudentList() {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [form] = Form.useForm();
 
   // 表格列定义
@@ -239,43 +238,41 @@ export function Component() {
               </Tag>
             </div>
             <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }}>
-              {record.age}岁 | {record.campus}
+              {record.age}岁 · {record.phone}
             </div>
           </div>
         </Space>
       ),
     },
     {
-      title: '联系方式',
-      key: 'contact',
+      title: '家长信息',
+      key: 'parent',
       width: 180,
       render: (_, record) => (
         <div>
           <div style={{ color: 'rgba(255, 255, 255, 0.85)', marginBottom: 4 }}>
-            <PhoneOutlined style={{ marginRight: 6, color: '#00d4ff' }} />
-            {record.parentPhone}
+            {record.parentName}
           </div>
           <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }}>
-            家长: {record.parentName}
+            {record.parentPhone}
           </div>
         </div>
       ),
     },
     {
-      title: '报读课程',
+      title: '课程',
       dataIndex: 'courses',
       key: 'courses',
-      width: 200,
       render: (courses: string[]) => (
-        <Space size={[4, 4]} wrap>
+        <Space wrap>
           {courses.map((course, index) => (
             <Tag
               key={index}
               style={{
                 background: 'rgba(0, 212, 255, 0.1)',
-                border: '1px solid rgba(0, 212, 255, 0.2)',
+                border: '1px solid rgba(0, 212, 255, 0.3)',
                 color: '#00d4ff',
-                margin: 0,
+                fontSize: 11,
               }}
             >
               {course}
@@ -288,20 +285,20 @@ export function Component() {
       title: '剩余课时',
       dataIndex: 'remainingHours',
       key: 'remainingHours',
-      width: 100,
+      width: 120,
       align: 'center',
       sorter: (a, b) => a.remainingHours - b.remainingHours,
       render: (hours: number) => (
-        <span
+        <Tag
           style={{
+            background: hours > 20 ? 'rgba(0, 255, 136, 0.1)' : hours > 0 ? 'rgba(255, 170, 0, 0.1)' : 'rgba(255, 77, 106, 0.1)',
+            border: `1px solid ${hours > 20 ? 'rgba(0, 255, 136, 0.3)' : hours > 0 ? 'rgba(255, 170, 0, 0.3)' : 'rgba(255, 77, 106, 0.3)'}`,
             color: hours > 20 ? '#00ff88' : hours > 0 ? '#ffaa00' : '#ff4d6a',
             fontWeight: 600,
-            fontSize: 16,
           }}
         >
-          {hours}
-          <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 2 }}>课时</span>
-        </span>
+          {hours} 课时
+        </Tag>
       ),
     },
     {
@@ -310,13 +307,6 @@ export function Component() {
       key: 'status',
       width: 100,
       align: 'center',
-      filters: [
-        { text: '在读', value: 'active' },
-        { text: '停课', value: 'inactive' },
-        { text: '休学', value: 'suspended' },
-        { text: '结业', value: 'graduated' },
-      ],
-      onFilter: (value, record) => record.status === value,
       render: (status: keyof typeof statusConfig) => {
         const config = statusConfig[status];
         return (
@@ -325,8 +315,6 @@ export function Component() {
               background: config.bg,
               border: `1px solid ${config.color}40`,
               color: config.color,
-              fontWeight: 500,
-              boxShadow: `0 0 8px ${config.color}30`,
             }}
           >
             {config.text}
@@ -339,7 +327,6 @@ export function Component() {
       dataIndex: 'enrollDate',
       key: 'enrollDate',
       width: 120,
-      sorter: (a, b) => new Date(a.enrollDate).getTime() - new Date(b.enrollDate).getTime(),
       render: (date: string) => (
         <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{date}</span>
       ),
@@ -347,52 +334,42 @@ export function Component() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       align: 'center',
+      fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space>
           <Tooltip title="查看详情">
             <Button
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00d4ff' }}
-              onClick={() => message.info(`查看学生: ${record.name}`)}
+              onClick={() => message.info(`查看: ${record.name}`)}
             />
           </Tooltip>
           <Tooltip title="编辑">
             <Button
               type="text"
               icon={<EditOutlined />}
-              style={{ color: '#ffaa00' }}
-              onClick={() => message.info(`编辑学生: ${record.name}`)}
+              style={{ color: '#00ff88' }}
+              onClick={() => {
+                setIsModalOpen(true);
+                form.setFieldsValue(record);
+              }}
             />
           </Tooltip>
-          <Dropdown
-            menu={{
-              items: [
-                { key: 'attendance', label: '考勤记录' },
-                { key: 'consumption', label: '课时消耗' },
-                { key: 'contract', label: '合同信息' },
-                { type: 'divider' },
-                { key: 'delete', label: '删除', danger: true },
-              ],
-              onClick: ({ key }) => message.info(`${key}: ${record.name}`),
-            }}
-          >
-            <Button type="text" icon={<MoreOutlined />} style={{ color: 'rgba(255, 255, 255, 0.65)' }} />
-          </Dropdown>
+          <Tooltip title="删除">
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              style={{ color: '#ff4d6a' }}
+              onClick={() => message.info(`删除: ${record.name}`)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
   ];
-
-  // 统计数据
-  const stats = {
-    total: mockStudents.length,
-    active: mockStudents.filter((s) => s.status === 'active').length,
-    inactive: mockStudents.filter((s) => s.status === 'inactive' || s.status === 'suspended').length,
-    lowHours: mockStudents.filter((s) => s.remainingHours > 0 && s.remainingHours <= 10).length,
-  };
 
   const handleRefresh = () => {
     setLoading(true);
@@ -402,16 +379,30 @@ export function Component() {
     }, 1000);
   };
 
+  // 导入成功回调
+  const handleImportSuccess = () => {
+    handleRefresh();
+  };
+
   return (
-    <div>
-      {/* 页面标题 */}
+    <div style={{ padding: 24 }}>
       <div style={styles.pageHeader}>
         <div style={styles.pageTitle}>
-          <TeamOutlined style={{ color: '#00d4ff' }} />
+          <TeamOutlined style={{ fontSize: 28, color: '#00d4ff' }} />
           学生管理
         </div>
         <Space>
-          <Button icon={<ExportOutlined />}>导出</Button>
+          <Button
+            icon={<ImportOutlined />}
+            onClick={() => setIsImportModalOpen(true)}
+            style={{
+              background: 'rgba(0, 212, 255, 0.1)',
+              border: '1px solid rgba(0, 212, 255, 0.3)',
+              color: '#00d4ff',
+            }}
+          >
+            批量导入
+          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -420,218 +411,148 @@ export function Component() {
           >
             新增学生
           </Button>
-        </Space>
-      </div>
-
-      {/* 统计栏 */}
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <div style={styles.statValue}>{stats.total}</div>
-          <div style={styles.statLabel}>全部学生</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#00ff88' }}>{stats.active}</div>
-          <div style={styles.statLabel}>在读学生</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#ff4d6a' }}>{stats.inactive}</div>
-          <div style={styles.statLabel}>停课/休学</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <Badge count={stats.lowHours} offset={[10, 0]} style={{ background: '#ffaa00' }}>
-            <div style={{ ...styles.statValue, color: '#ffaa00' }}>{stats.lowHours}</div>
-          </Badge>
-          <div style={styles.statLabel}>课时不足</div>
-        </div>
-      </div>
-
-      {/* 主卡片 */}
-      <Card style={styles.card} bodyStyle={{ padding: 20 }}>
-        {/* 筛选栏 */}
-        <div style={styles.filterBar}>
-          <Input
-            placeholder="搜索学生姓名、手机号..."
-            prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
-            style={styles.searchInput}
-            allowClear
-          />
-          <Select
-            placeholder="学生状态"
-            style={styles.select}
-            allowClear
-            options={[
-              { value: 'active', label: '在读' },
-              { value: 'inactive', label: '停课' },
-              { value: 'suspended', label: '休学' },
-              { value: 'graduated', label: '结业' },
-            ]}
-          />
-          <Select
-            placeholder="所属校区"
-            style={styles.select}
-            allowClear
-            options={[
-              { value: '1', label: '总部校区' },
-              { value: '2', label: '分部校区' },
-            ]}
-          />
-          <Select
-            placeholder="报读课程"
-            style={{ width: 160 }}
-            allowClear
-            options={[
-              { value: '1', label: '少儿编程' },
-              { value: '2', label: '数学思维' },
-              { value: '3', label: '英语口语' },
-              { value: '4', label: '美术创意' },
-              { value: '5', label: '钢琴基础' },
-            ]}
-          />
-          <Button icon={<FilterOutlined />}>更多筛选</Button>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
           </Button>
+        </Space>
+      </div>
+
+      <Card style={styles.card} bordered={false}>
+        <div style={styles.statsBar}>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>{mockStudents.length}</div>
+            <div style={styles.statLabel}>总学生数</div>
+          </div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              {mockStudents.filter((s) => s.status === 'active').length}
+            </div>
+            <div style={styles.statLabel}>在读学生</div>
+          </div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              {mockStudents.reduce((sum, s) => sum + s.remainingHours, 0)}
+            </div>
+            <div style={styles.statLabel}>总剩余课时</div>
+          </div>
         </div>
 
-        {/* 表格 */}
+        <div style={styles.filterBar}>
+          <Input
+            placeholder="搜索学生姓名、手机号"
+            prefix={<SearchOutlined />}
+            style={styles.searchInput}
+          />
+          <Select
+            placeholder="状态"
+            style={styles.select}
+            options={[
+              { label: '全部', value: 'all' },
+              { label: '在读', value: 'active' },
+              { label: '停课', value: 'inactive' },
+              { label: '结业', value: 'graduated' },
+              { label: '休学', value: 'suspended' },
+            ]}
+          />
+          <Select
+            placeholder="校区"
+            style={styles.select}
+            options={[
+              { label: '全部', value: 'all' },
+              { label: '总部校区', value: '总部校区' },
+              { label: '分部校区', value: '分部校区' },
+            ]}
+          />
+          <Button icon={<FilterOutlined />}>高级筛选</Button>
+          <Button icon={<ExportOutlined />}>导出</Button>
+        </div>
+
         <Table
           columns={columns}
           dataSource={mockStudents}
           rowKey="id"
           loading={loading}
-          pagination={{
-            total: mockStudents.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-          }}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
           }}
-          scroll={{ x: 1200 }}
+          pagination={{
+            total: mockStudents.length,
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
         />
-
-        {/* 批量操作 */}
-        {selectedRowKeys.length > 0 && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: 24,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: '#1a2332',
-              padding: '12px 24px',
-              borderRadius: 10,
-              border: '1px solid rgba(0, 212, 255, 0.2)',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 16,
-              zIndex: 100,
-            }}
-          >
-            <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-              已选择 <span style={{ color: '#00d4ff', fontWeight: 600 }}>{selectedRowKeys.length}</span> 项
-            </span>
-            <Button size="small">批量编辑</Button>
-            <Button size="small">批量导出</Button>
-            <Button size="small" danger>
-              批量删除
-            </Button>
-            <Button type="link" size="small" onClick={() => setSelectedRowKeys([])}>
-              取消选择
-            </Button>
-          </div>
-        )}
       </Card>
 
-      {/* 新增学生弹窗 */}
       <Modal
-        title={
-          <span style={{ color: '#fff', fontSize: 18 }}>
-            <UserOutlined style={{ marginRight: 8, color: '#00d4ff' }} />
-            新增学生
-          </span>
-        }
+        title="新增学生"
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        width={720}
-        footer={[
-          <Button key="cancel" onClick={() => setIsModalOpen(false)}>
-            取消
-          </Button>,
-          <Button key="submit" type="primary" style={styles.actionButton}>
-            确认添加
-          </Button>,
-        ]}
+        onOk={() => {
+          form.validateFields().then(() => {
+            message.success('保存成功');
+            setIsModalOpen(false);
+          });
+        }}
+        width={800}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+        <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="学生姓名" name="name" rules={[{ required: true }]}>
-                <Input placeholder="请输入学生姓名" />
+                <Input />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item label="性别" name="gender" rules={[{ required: true }]}>
                 <Select
-                  placeholder="请选择性别"
                   options={[
-                    { value: 'male', label: '男' },
-                    { value: 'female', label: '女' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="出生日期" name="birthday" rules={[{ required: true }]}>
-                <DatePicker style={{ width: '100%' }} placeholder="请选择出生日期" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="所属校区" name="campus" rules={[{ required: true }]}>
-                <Select
-                  placeholder="请选择校区"
-                  options={[
-                    { value: '1', label: '总部校区' },
-                    { value: '2', label: '分部校区' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="家长姓名" name="parentName" rules={[{ required: true }]}>
-                <Input placeholder="请输入家长姓名" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="家长电话" name="parentPhone" rules={[{ required: true }]}>
-                <Input placeholder="请输入家长电话" />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item label="报读课程" name="courses">
-                <Select
-                  mode="multiple"
-                  placeholder="请选择报读课程"
-                  options={[
-                    { value: '1', label: '少儿编程' },
-                    { value: '2', label: '数学思维' },
-                    { value: '3', label: '英语口语' },
-                    { value: '4', label: '美术创意' },
-                    { value: '5', label: '钢琴基础' },
+                    { label: '男', value: 'male' },
+                    { label: '女', value: 'female' },
                   ]}
                 />
               </Form.Item>
             </Col>
           </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="年龄" name="age" rules={[{ required: true }]}>
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="手机号" name="phone" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="家长姓名" name="parentName" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="家长手机" name="parentPhone" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="入学日期" name="enrollDate" rules={[{ required: true }]}>
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
         </Form>
       </Modal>
+
+      {/* 批量导入弹窗 */}
+      <StudentBatchImport
+        open={isImportModalOpen}
+        onCancel={() => setIsImportModalOpen(false)}
+        onSuccess={handleImportSuccess}
+      />
     </div>
   );
 }
+
+export default StudentList;

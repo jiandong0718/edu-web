@@ -236,141 +236,48 @@ const styles = {
     letterSpacing: '2px',
   },
   subtitle: {
-    color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 8,
     fontSize: 14,
-    letterSpacing: '1px',
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 8,
+  },
+  formItem: {
+    marginBottom: 24,
   },
   input: {
-    height: 50,
-    background: 'rgba(26, 35, 50, 0.8)',
+    height: 48,
+    background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(0, 212, 255, 0.2)',
-    borderRadius: 10,
-    fontSize: 15,
+    borderRadius: 8,
+    color: '#fff',
   },
-  button: {
-    height: 50,
-    fontSize: 16,
-    fontWeight: 600,
-    borderRadius: 10,
+  loginButton: {
+    width: '100%',
+    height: 48,
     background: 'linear-gradient(135deg, #00d4ff 0%, #0099ff 100%)',
     border: 'none',
-    boxShadow: '0 4px 20px rgba(0, 212, 255, 0.4)',
+    borderRadius: 8,
+    fontSize: 16,
+    fontWeight: 600,
+    boxShadow: '0 4px 15px rgba(0, 212, 255, 0.4)',
     transition: 'all 0.3s ease',
   },
-  footer: {
-    textAlign: 'center' as const,
-    color: 'rgba(255, 255, 255, 0.4)',
-    fontSize: 12,
-    marginTop: 24,
-  },
-  decorLine: {
-    position: 'absolute' as const,
-    width: '100%',
-    height: 2,
-    background: 'linear-gradient(90deg, transparent, #00d4ff, transparent)',
-    top: 0,
-    left: 0,
-    borderRadius: '16px 16px 0 0',
-  },
 };
-
-// 全局样式
-const globalStyles = `
-  @keyframes cardFloat {
-    from {
-      opacity: 0;
-      transform: translateY(30px) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 50px rgba(0, 212, 255, 0.5);
-    }
-  }
-
-  .login-form .ant-input-affix-wrapper {
-    background: rgba(26, 35, 50, 0.8) !important;
-    border: 1px solid rgba(0, 212, 255, 0.2) !important;
-    border-radius: 10px !important;
-    height: 50px !important;
-    transition: all 0.3s ease !important;
-  }
-
-  .login-form .ant-input-affix-wrapper:hover,
-  .login-form .ant-input-affix-wrapper:focus,
-  .login-form .ant-input-affix-wrapper-focused {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2) !important;
-  }
-
-  .login-form .ant-input {
-    background: transparent !important;
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-size: 15px !important;
-  }
-
-  .login-form .ant-input::placeholder {
-    color: rgba(255, 255, 255, 0.4) !important;
-  }
-
-  .login-form .ant-input-prefix {
-    color: rgba(0, 212, 255, 0.6) !important;
-    margin-right: 12px !important;
-  }
-
-  .login-form .ant-btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(0, 212, 255, 0.5) !important;
-  }
-
-  .login-form .ant-btn-primary:active {
-    transform: translateY(0);
-  }
-
-  .login-form .ant-form-item {
-    margin-bottom: 24px;
-  }
-`;
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { setToken, setUserInfo } = useUserStore();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // 注入全局样式
-    const styleEl = document.createElement('style');
-    styleEl.textContent = globalStyles;
-    document.head.appendChild(styleEl);
-    return () => {
-      document.head.removeChild(styleEl);
-    };
-  }, []);
-
   const onFinish = async (values: LoginFormValues) => {
     setLoading(true);
     try {
-      const result = await login(values);
-      setToken(result.token);
-      setUserInfo(result.userInfo);
+      const response = await login(values);
+      setToken(response.token);
+      setUserInfo(response.userInfo);
       message.success('登录成功');
       navigate('/');
     } catch (error) {
-      // 错误已在 request 拦截器中处理
+      message.error('登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);
     }
@@ -379,16 +286,12 @@ const Login: React.FC = () => {
   return (
     <div style={styles.container}>
       <ParticleBackground />
-
       <div style={styles.loginCard}>
-        {/* 顶部装饰线 */}
-        <div style={styles.decorLine} />
-
         <div style={styles.logoContainer}>
           <div style={styles.logoIcon}>
-            <SafetyOutlined style={{ fontSize: 36, color: '#00d4ff' }} />
+            <SafetyOutlined style={{ fontSize: 40, color: '#00d4ff' }} />
           </div>
-          <h1 style={styles.title}>EDU ADMIN</h1>
+          <h1 style={styles.title}>教育管理系统</h1>
           <p style={styles.subtitle}>Education Management System</p>
         </div>
 
@@ -397,14 +300,14 @@ const Login: React.FC = () => {
           onFinish={onFinish}
           autoComplete="off"
           size="large"
-          className="login-form"
         >
           <Form.Item
             name="username"
             rules={[{ required: true, message: '请输入用户名' }]}
+            style={styles.formItem}
           >
             <Input
-              prefix={<UserOutlined />}
+              prefix={<UserOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
               placeholder="用户名"
               style={styles.input}
             />
@@ -413,34 +316,61 @@ const Login: React.FC = () => {
           <Form.Item
             name="password"
             rules={[{ required: true, message: '请输入密码' }]}
+            style={styles.formItem}
           >
             <Input.Password
-              prefix={<LockOutlined />}
+              prefix={<LockOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
               placeholder="密码"
               style={styles.input}
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 16 }}>
+          <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
               loading={loading}
-              block
-              style={styles.button}
+              style={styles.loginButton}
             >
-              {loading ? '登录中...' : '登 录'}
+              登录
             </Button>
           </Form.Item>
         </Form>
-
-        <div style={styles.footer}>
-          <p>默认账号: admin / admin123</p>
-          <p style={{ marginTop: 8, opacity: 0.6 }}>
-            Powered by React + Ant Design
-          </p>
-        </div>
       </div>
+
+      <style>{`
+        @keyframes cardFloat {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% {
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+          }
+          50% {
+            box-shadow: 0 0 50px rgba(0, 212, 255, 0.6);
+          }
+        }
+
+        @keyframes gradientShift {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+      `}</style>
     </div>
   );
 };

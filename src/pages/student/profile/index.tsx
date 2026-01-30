@@ -1,9 +1,11 @@
 import { Card } from 'antd';
 
-export function Component() {
+function Component() {
   return (
-    <Card title="学生档案">
-      <p>学生档案页面开发中...</p>
+    <Card title="学员档案">
+      <p>学员档案页面开发中...</p>
     </Card>
   );
 }
+
+export default Component;

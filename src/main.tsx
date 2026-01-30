@@ -97,10 +97,6 @@ const darkTechTheme = {
     Dropdown: {
       colorBgElevated: '#1a2332',
     },
-    Statistic: {
-      titleColor: 'rgba(255, 255, 255, 0.65)',
-      contentColor: '#ffffff',
-    },
   },
 }
 

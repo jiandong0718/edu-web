@@ -138,7 +138,7 @@ const statusConfig = {
   terminated: { color: '#ff4d6a', text: '已终止', bg: 'rgba(255, 77, 106, 0.1)' },
 };
 
-export function Component() {
+function ContractList() {
   const [loading, setLoading] = useState(false);
 
   const columns: ColumnsType<Contract> = [
@@ -245,8 +245,9 @@ export function Component() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       align: 'center',
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Tooltip title="查看详情">
@@ -254,27 +255,21 @@ export function Component() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00d4ff' }}
-              onClick={() => message.info(`查看: ${record.contractNo}`)}
+              onClick={() => message.info(`查看合同: ${record.contractNo}`)}
             />
           </Tooltip>
           <Tooltip title="编辑">
             <Button
               type="text"
               icon={<EditOutlined />}
-              style={{ color: '#ffaa00' }}
-              onClick={() => message.info(`编辑: ${record.contractNo}`)}
+              style={{ color: '#00ff88' }}
+              onClick={() => message.info(`编辑合同: ${record.contractNo}`)}
             />
           </Tooltip>
         </Space>
       ),
     },
   ];
-
-  const stats = {
-    total: mockContracts.length,
-    active: mockContracts.filter((c) => c.status === 'active').length,
-    totalAmount: mockContracts.reduce((acc, c) => acc + c.totalAmount, 0),
-  };
 
   const handleRefresh = () => {
     setLoading(true);
@@ -285,45 +280,51 @@ export function Component() {
   };
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
       <div style={styles.pageHeader}>
         <div style={styles.pageTitle}>
-          <FileTextOutlined style={{ color: '#00d4ff' }} />
+          <FileTextOutlined style={{ fontSize: 28, color: '#00d4ff' }} />
           合同管理
         </div>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} style={styles.actionButton}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={styles.actionButton}
+          >
             新增合同
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+            刷新
           </Button>
         </Space>
       </div>
 
-      <div style={styles.statsBar}>
-        <div style={styles.statItem}>
-          <div style={styles.statValue}>{stats.total}</div>
-          <div style={styles.statLabel}>全部合同</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#00ff88' }}>{stats.active}</div>
-          <div style={styles.statLabel}>生效中</div>
-        </div>
-        <div style={{ width: 1, background: 'rgba(0, 212, 255, 0.2)' }} />
-        <div style={styles.statItem}>
-          <div style={{ ...styles.statValue, color: '#ffaa00' }}>
-            ¥{stats.totalAmount.toLocaleString()}
+      <Card style={styles.card} bordered={false}>
+        <div style={styles.statsBar}>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>{mockContracts.length}</div>
+            <div style={styles.statLabel}>总合同数</div>
           </div>
-          <div style={styles.statLabel}>合同总额</div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              {mockContracts.filter((c) => c.status === 'active').length}
+            </div>
+            <div style={styles.statLabel}>生效中</div>
+          </div>
+          <div style={styles.statItem}>
+            <div style={styles.statValue}>
+              ¥{mockContracts.reduce((sum, c) => sum + c.totalAmount, 0).toLocaleString()}
+            </div>
+            <div style={styles.statLabel}>合同总额</div>
+          </div>
         </div>
-      </div>
 
-      <Card style={styles.card} bodyStyle={{ padding: 20 }}>
         <div style={styles.filterBar}>
           <Input
-            placeholder="搜索合同编号、学生姓名..."
-            prefix={<SearchOutlined style={{ color: 'rgba(255, 255, 255, 0.4)' }} />}
-            style={{ width: 300 }}
-            allowClear
+            placeholder="搜索合同编号、学生姓名"
+            prefix={<SearchOutlined />}
+            style={{ width: 280 }}
           />
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
@@ -338,10 +339,13 @@ export function Component() {
           pagination={{
             total: mockContracts.length,
             pageSize: 10,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showSizeChanger: true,
+            showTotal: (total) => `共 ${total} 条`,
           }}
         />
       </Card>
     </div>
   );
 }
+
+export default ContractList;
