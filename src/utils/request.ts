@@ -112,8 +112,8 @@ export const http = {
   },
 
   // 文件下载
-  download(url: string, filename?: string): Promise<void> {
-    return request.get(url, { responseType: 'blob' }).then((response: any) => {
+  download(url: string, filename?: string, config?: AxiosRequestConfig): Promise<void> {
+    return request.get(url, { ...config, responseType: 'blob' }).then((response: any) => {
       const blob = new Blob([response.data]);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

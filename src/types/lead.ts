@@ -96,11 +96,15 @@ export interface LeadImportData {
 // 线索批量导入结果
 export interface LeadImportResult {
   total: number;
+  success: number;
+  failed: number;
   successCount: number;
   failureCount: number;
   errors: Array<{
+    row: number;
     rowIndex: number;
     leadName: string;
+    message: string;
     errorMessage: string;
   }>;
 }

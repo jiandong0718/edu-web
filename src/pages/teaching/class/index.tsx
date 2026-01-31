@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
-import type { Class, ClassQueryParams } from '@/types/class';
+import type { Class, ClassQueryParams, ClassStatus, ClassType } from '@/types/class';
 import { getClassList, deleteClass } from '@/api/class';
 
 const { Search } = Input;
@@ -103,7 +103,7 @@ export default function Component() {
   const handleStatusChange = (value: string) => {
     setQueryParams({
       ...queryParams,
-      status: value || undefined,
+      status: (value || undefined) as ClassStatus | undefined,
       page: 1,
     });
   };
@@ -112,7 +112,7 @@ export default function Component() {
   const handleTypeChange = (value: string) => {
     setQueryParams({
       ...queryParams,
-      type: value || undefined,
+      type: (value || undefined) as ClassType | undefined,
       page: 1,
     });
   };

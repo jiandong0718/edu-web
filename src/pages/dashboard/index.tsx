@@ -218,7 +218,7 @@ const EnrollmentDashboard = () => {
     setLoading(true);
     try {
       const result = await getEnrollmentDashboard();
-      setData(result.data);
+      setData(result.data || result);
     } catch (error) {
       message.error('获取招生数据失败');
     } finally {
@@ -375,7 +375,7 @@ const RevenueDashboard = () => {
     setLoading(true);
     try {
       const result = await getRevenueDashboard();
-      setData(result.data);
+      setData(result.data || result);
     } catch (error) {
       message.error('获取营收数据失败');
     } finally {
@@ -530,7 +530,7 @@ const TeachingDashboard = () => {
     setLoading(true);
     try {
       const result = await getTeachingDashboard();
-      setData(result.data);
+      setData(result.data || result);
     } catch (error) {
       message.error('获取教学数据失败');
     } finally {
