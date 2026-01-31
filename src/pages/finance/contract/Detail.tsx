@@ -24,6 +24,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ExclamationCircleOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -42,6 +43,7 @@ import type {
   HourAccount,
   RefundApplication,
 } from '@/types/contract';
+import ContractPrintModal from '@/components/ContractPrintModal';
 import './Detail.less';
 
 const ContractDetail: React.FC = () => {
@@ -53,6 +55,7 @@ const ContractDetail: React.FC = () => {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [hourAccounts, setHourAccounts] = useState<HourAccount[]>([]);
   const [refunds, setRefunds] = useState<RefundApplication[]>([]);
+  const [printModalVisible, setPrintModalVisible] = useState(false);
 
   // 加载合同详情
   const loadContractDetail = async () => {
@@ -151,6 +154,11 @@ const ContractDetail: React.FC = () => {
         }
       },
     });
+  };
+
+  // 打印合同
+  const handlePrint = () => {
+    setPrintModalVisible(true);
   };
 
   // 合同明细列
@@ -386,6 +394,9 @@ const ContractDetail: React.FC = () => {
         }
         extra={
           <Space>
+            <Button icon={<PrinterOutlined />} onClick={handlePrint}>
+              打印
+            </Button>
             <Button icon={<DownloadOutlined />} onClick={handleDownload}>
               下载
             </Button>
@@ -550,6 +561,19 @@ const ContractDetail: React.FC = () => {
             ))}
           </Timeline>
         </Card>
+      )}
+
+      {/* 打印合同弹窗 */}
+      {contract && (
+        <ContractPrintModal
+          visible={printModalVisible}
+          contractId={contract.id}
+          contractNo={contract.contractNo}
+          onClose={() => setPrintModalVisible(false)}
+          onSuccess={() => {
+            message.success('打印成功');
+          }}
+        />
       )}
     </div>
   );

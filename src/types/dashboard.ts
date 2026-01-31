@@ -151,3 +151,129 @@ export interface TeachingData {
     rate: number;
   }[];
 }
+
+// ========== 教学数据看板详细类型定义 ==========
+
+// 教学数据概览
+export interface TeachingOverview {
+  activeStudentCount: number;
+  trialStudentCount: number;
+  potentialStudentCount: number;
+  totalClassCount: number;
+  ongoingClassCount: number;
+  fullClassCount: number;
+  totalTeacherCount: number;
+  fullTimeTeacherCount: number;
+  partTimeTeacherCount: number;
+  averageAttendanceRate: number;
+  averageCompletionRate: number;
+  renewalRate: number;
+}
+
+// 考勤率趋势项
+export interface AttendanceRateItem {
+  date: string;
+  rate: number;
+  expectedCount: number;
+  actualCount: number;
+}
+
+// 班级统计项
+export interface ClassStatsItem {
+  classId: number;
+  className: string;
+  courseName: string;
+  status: string;
+  statusName: string;
+  studentCount: number;
+  capacity: number;
+  attendanceRate: number;
+  completedLessons: number;
+  totalLessons: number;
+}
+
+// 教师统计项
+export interface TeacherStatsItem {
+  teacherId: number;
+  teacherName: string;
+  teacherType: string;
+  teacherTypeName: string;
+  classCount: number;
+  weekScheduleCount: number;
+  monthScheduleCount: number;
+  studentCount: number;
+  averageAttendanceRate: number;
+}
+
+// 课程消耗统计项
+export interface CourseConsumptionItem {
+  courseId: number;
+  courseName: string;
+  totalHours: number;
+  consumedHours: number;
+  remainingHours: number;
+  consumptionRate: number;
+  studentCount: number;
+  classCount: number;
+}
+
+// 班级状态分布项
+export interface ClassStatusDistribution {
+  status: string;
+  statusName: string;
+  count: number;
+  percentage: number;
+}
+
+// ========== 营收数据看板详细类型定义 ==========
+
+// 营收概览
+export interface RevenueOverview {
+  incomeToday: number;
+  incomeThisWeek: number;
+  incomeThisMonth: number;
+  incomeThisYear: number;
+  totalArrears: number;
+  arrearsStudentCount: number;
+  arrearsContractCount: number;
+  refundThisMonth: number;
+  refundRate: number;
+}
+
+// 营收趋势项
+export interface RevenueTrendItem {
+  date: string;
+  amount: number;
+}
+
+// 收款方式分布项
+export interface PaymentMethodItem {
+  method: string;
+  methodName: string;
+  amount: number;
+  count: number;
+  percentage: number;
+}
+
+// 欠费统计项
+export interface ArrearsItem {
+  studentId: number;
+  studentName: string;
+  contractNo: string;
+  contractId: number;
+  paidAmount: number;
+  receivedAmount: number;
+  arrearsAmount: number;
+  campusName: string;
+  signDate: string;
+  expireDate: string;
+}
+
+// 课程营收排行项
+export interface CourseRevenueItem {
+  courseId: number;
+  courseName: string;
+  revenue: number;
+  contractCount: number;
+  studentCount: number;
+}

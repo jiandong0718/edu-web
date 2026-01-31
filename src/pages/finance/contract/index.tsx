@@ -19,8 +19,11 @@ import {
   ReloadOutlined,
   FileTextOutlined,
   UserOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import ContractPrintModal from '@/components/ContractPrintModal';
+import BatchPrintModal from '@/components/BatchPrintModal';
 
 interface Contract {
   id: number;
@@ -142,6 +145,11 @@ const statusConfig = {
 function ContractList() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [batchPrintModalVisible, setBatchPrintModalVisible] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Contract[]>([]);
 
   const columns: ColumnsType<Contract> = [
     {
@@ -268,6 +276,14 @@ function ContractList() {
               onClick={() => message.info(`编辑合同: ${record.contractNo}`)}
             />
           </Tooltip>
+          <Tooltip title="打印">
+            <Button
+              type="text"
+              icon={<PrinterOutlined />}
+              style={{ color: '#ffaa00' }}
+              onClick={() => handlePrint(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -279,6 +295,27 @@ function ContractList() {
       setLoading(false);
       message.success('数据已刷新');
     }, 1000);
+  };
+
+  const handlePrint = (contract: Contract) => {
+    setSelectedContract(contract);
+    setPrintModalVisible(true);
+  };
+
+  const handleBatchPrint = () => {
+    if (selectedRows.length === 0) {
+      message.warning('请先选择要打印的合同');
+      return;
+    }
+    setBatchPrintModalVisible(true);
+  };
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (selectedKeys: React.Key[], selectedRecords: Contract[]) => {
+      setSelectedRowKeys(selectedKeys);
+      setSelectedRows(selectedRecords);
+    },
   };
 
   return (
@@ -295,6 +332,13 @@ function ContractList() {
             style={styles.actionButton}
           >
             新增合同
+          </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            onClick={handleBatchPrint}
+            disabled={selectedRows.length === 0}
+          >
+            批量打印 {selectedRows.length > 0 && `(${selectedRows.length})`}
           </Button>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
@@ -338,6 +382,7 @@ function ContractList() {
           dataSource={mockContracts}
           rowKey="id"
           loading={loading}
+          rowSelection={rowSelection}
           pagination={{
             total: mockContracts.length,
             pageSize: 10,
@@ -346,6 +391,37 @@ function ContractList() {
           }}
         />
       </Card>
+
+      {/* 打印合同弹窗 */}
+      {selectedContract && (
+        <ContractPrintModal
+          visible={printModalVisible}
+          contractId={selectedContract.id}
+          contractNo={selectedContract.contractNo}
+          onClose={() => {
+            setPrintModalVisible(false);
+            setSelectedContract(null);
+          }}
+          onSuccess={() => {
+            message.success('打印成功');
+          }}
+        />
+      )}
+
+      {/* 批量打印弹窗 */}
+      <BatchPrintModal
+        visible={batchPrintModalVisible}
+        contracts={selectedRows.map((row) => ({
+          id: row.id,
+          contractNo: row.contractNo,
+          studentName: row.studentName,
+        }))}
+        onClose={() => setBatchPrintModalVisible(false)}
+        onSuccess={() => {
+          setSelectedRowKeys([]);
+          setSelectedRows([]);
+        }}
+      />
     </div>
   );
 }
