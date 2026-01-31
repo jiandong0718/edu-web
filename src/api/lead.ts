@@ -47,7 +47,19 @@ export const updateLeadStatus = (id: number, status: string) => {
 
 // 分配线索
 export const assignLeads = (data: LeadAssignData) => {
-  return http.post('/crm/lead/assign', data);
+  return http.post('/marketing/lead/batch-assign', null, {
+    params: {
+      advisorId: data.assigneeId,
+    },
+    data: data.leadIds,
+  });
+};
+
+// 批量分配线索
+export const batchAssignLeads = (leadIds: number[], advisorId: number) => {
+  return http.put('/marketing/lead/batch-assign', leadIds, {
+    params: { advisorId },
+  });
 };
 
 // 导出线索列表
@@ -57,17 +69,25 @@ export const exportLeadList = (_params: LeadQueryParams) => {
 
 // 下载线索导入模板
 export const downloadLeadTemplate = () => {
-  return http.download('/crm/lead/import/template', '线索导入模板.xlsx');
+  return http.download('/marketing/lead/import-template', '线索导入模板.xlsx');
 };
 
 // 批量导入线索
 export const importLeads = (file: File) => {
   const formData = new FormData();
   formData.append('file', file);
-  return http.post<LeadImportResult>('/crm/lead/import', formData, {
+  return http.post<LeadImportResult>('/marketing/lead/batch-import', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
+  });
+};
+
+// 自动分配线索
+export const autoAssignLeads = (leadIds: number[], campusId: number) => {
+  return http.post('/marketing/lead/auto-assign', {
+    leadIds,
+    campusId,
   });
 };
 

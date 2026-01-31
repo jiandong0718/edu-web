@@ -9,7 +9,10 @@ export interface StudentTag {
   name: string;
   color: string;
   description?: string;
+  usageCount?: number; // 使用次数
+  status?: 0 | 1; // 状态：0-禁用，1-启用
   createTime: string;
+  updateTime?: string;
 }
 
 // 学员基本信息
@@ -84,6 +87,7 @@ export interface StudentTagQueryParams {
   page: number;
   pageSize: number;
   name?: string;
+  status?: 0 | 1;
 }
 
 // 学员标签列表响应
@@ -100,6 +104,7 @@ export interface StudentTagFormData {
   name: string;
   color: string;
   description?: string;
+  status?: 0 | 1;
 }
 
 // 学员批量导入参数

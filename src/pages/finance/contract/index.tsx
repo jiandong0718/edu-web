@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -139,6 +140,7 @@ const statusConfig = {
 };
 
 function ContractList() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const columns: ColumnsType<Contract> = [
@@ -255,7 +257,7 @@ function ContractList() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00d4ff' }}
-              onClick={() => message.info(`查看合同: ${record.contractNo}`)}
+              onClick={() => navigate(`/finance/contract/${record.id}`)}
             />
           </Tooltip>
           <Tooltip title="编辑">

@@ -1,0 +1,138 @@
+.contract-detail {
+  padding: 24px;
+  background: #111827;
+  min-height: 100vh;
+
+  .stat-card {
+    background: linear-gradient(135deg, #1a1f2e 0%, #252b3b 100%);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    :global {
+      .ant-statistic-title {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 14px;
+      }
+
+      .ant-statistic-content {
+        font-size: 24px;
+        font-weight: bold;
+      }
+    }
+  }
+
+  .info-card,
+  .detail-card,
+  .payment-card,
+  .account-card,
+  .refund-card {
+    background: linear-gradient(135deg, #1a1f2e 0%, #252b3b 100%);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    :global {
+      .ant-card-head {
+        border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        color: #fff;
+
+        .ant-card-head-title {
+          color: #fff;
+          font-size: 16px;
+          font-weight: 600;
+        }
+      }
+
+      .ant-card-body {
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .ant-descriptions-bordered .ant-descriptions-item-label {
+        background: rgba(0, 212, 255, 0.05);
+        color: rgba(255, 255, 255, 0.65);
+        border-right: 1px solid rgba(0, 212, 255, 0.2);
+      }
+
+      .ant-descriptions-bordered .ant-descriptions-item-content {
+        background: rgba(0, 0, 0, 0.2);
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .ant-descriptions-bordered .ant-descriptions-row {
+        border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+      }
+
+      .ant-table {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.85);
+
+        .ant-table-thead > tr > th {
+          background: rgba(0, 212, 255, 0.1);
+          color: #fff;
+          border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+          font-weight: 600;
+        }
+
+        .ant-table-tbody > tr > td {
+          border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+          color: rgba(255, 255, 255, 0.85);
+        }
+
+        .ant-table-tbody > tr:hover > td {
+          background: rgba(0, 212, 255, 0.05);
+        }
+      }
+
+      .ant-timeline-item-content {
+        color: rgba(255, 255, 255, 0.85);
+
+        p {
+          margin-bottom: 8px;
+          line-height: 1.6;
+
+          strong {
+            color: rgba(255, 255, 255, 0.65);
+            margin-right: 8px;
+          }
+        }
+      }
+
+      .ant-btn {
+        border-radius: 4px;
+        font-weight: 500;
+        transition: all 0.3s;
+
+        &:not(.ant-btn-dangerous) {
+          background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+          border: none;
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
+
+          &:hover {
+            background: linear-gradient(135deg, #00e5ff 0%, #00aaff 100%);
+            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.5);
+            transform: translateY(-2px);
+          }
+        }
+
+        &.ant-btn-dangerous {
+          background: linear-gradient(135deg, #ff4d6a 0%, #ff1744 100%);
+          border: none;
+          color: #fff;
+          box-shadow: 0 2px 8px rgba(255, 77, 106, 0.3);
+
+          &:hover {
+            background: linear-gradient(135deg, #ff5e7a 0%, #ff2854 100%);
+            box-shadow: 0 4px 12px rgba(255, 77, 106, 0.5);
+            transform: translateY(-2px);
+          }
+        }
+      }
+
+      .ant-progress-bg {
+        background: linear-gradient(90deg, #00d4ff 0%, #00ff88 100%);
+      }
+    }
+  }
+}

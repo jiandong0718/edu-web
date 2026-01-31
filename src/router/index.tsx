@@ -122,6 +122,12 @@ const router = createBrowserRouter([
             }),
           },
           {
+            path: 'class/:id',
+            lazy: async () => ({
+              Component: (await import('@/pages/teaching/class/Detail')).default
+            }),
+          },
+          {
             path: 'schedule',
             lazy: async () => ({
               Component: (await import('@/pages/teaching/schedule')).default
@@ -143,6 +149,12 @@ const router = createBrowserRouter([
             path: 'contract',
             lazy: async () => ({
               Component: (await import('@/pages/finance/contract')).default
+            }),
+          },
+          {
+            path: 'contract/:id',
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/contract/Detail')).default
             }),
           },
           {

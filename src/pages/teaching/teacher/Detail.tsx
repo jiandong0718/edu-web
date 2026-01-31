@@ -17,6 +17,14 @@ import {
   message,
   Popconfirm,
   Spin,
+  InputNumber,
+  Calendar,
+  Badge,
+  Tooltip,
+  Row,
+  Col,
+  Divider,
+  Typography,
 } from 'antd';
 import {
   UserOutlined,
@@ -26,9 +34,15 @@ import {
   PlusOutlined,
   SafetyCertificateOutlined,
   CalendarOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  DownloadOutlined,
+  EyeOutlined,
+  HistoryOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
+import type { Dayjs } from 'dayjs';
 import type { Teacher, Certificate, Schedule, CertificateFormData, ScheduleFormData } from '@/types/teacher';
 import {
   getTeacherDetail,
@@ -46,6 +60,27 @@ import dayjs from 'dayjs';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
+const { TextArea } = Input;
+const { Title, Text } = Typography;
+
+// 课酬配置接口
+interface SalaryConfig {
+  id: number;
+  courseType: string;
+  hourlyRate: number;
+  effectiveDate: string;
+  remark?: string;
+}
+
+// 排班事件接口（用于日历展示）
+interface ScheduleEvent {
+  id: number;
+  date: string;
+  title: string;
+  startTime: string;
+  endTime: string;
+  type: 'class' | 'available';
+}
 
 const styles = {
   pageHeader: {
@@ -118,15 +153,75 @@ export function Component() {
   const [teacher, setTeacher] = useState<Teacher>();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [salaryConfigs, setSalaryConfigs] = useState<SalaryConfig[]>([]);
+  const [scheduleEvents, setScheduleEvents] = useState<ScheduleEvent[]>([]);
 
   const [certModalVisible, setCertModalVisible] = useState(false);
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
+  const [salaryModalVisible, setSalaryModalVisible] = useState(false);
+  const [availableTimeModalVisible, setAvailableTimeModalVisible] = useState(false);
   const [editingCert, setEditingCert] = useState<Certificate>();
   const [editingSchedule, setEditingSchedule] = useState<Schedule>();
+  const [editingSalary, setEditingSalary] = useState<SalaryConfig>();
 
   const [certForm] = Form.useForm();
   const [scheduleForm] = Form.useForm();
+  const [salaryForm] = Form.useForm();
+  const [availableTimeForm] = Form.useForm();
   const [certFileUrl, setCertFileUrl] = useState<string>();
+  const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
+
+  // 模拟课酬配置数据
+  const mockSalaryConfigs: SalaryConfig[] = [
+    {
+      id: 1,
+      courseType: '少儿编程',
+      hourlyRate: 200,
+      effectiveDate: '2024-01-01',
+      remark: '初级课程',
+    },
+    {
+      id: 2,
+      courseType: '数学思维',
+      hourlyRate: 180,
+      effectiveDate: '2024-01-01',
+    },
+    {
+      id: 3,
+      courseType: '英语口语',
+      hourlyRate: 220,
+      effectiveDate: '2024-02-01',
+      remark: '外教课程',
+    },
+  ];
+
+  // 模拟排班事件数据
+  const mockScheduleEvents: ScheduleEvent[] = [
+    {
+      id: 1,
+      date: '2024-03-20',
+      title: '少儿编程班',
+      startTime: '09:00',
+      endTime: '11:00',
+      type: 'class',
+    },
+    {
+      id: 2,
+      date: '2024-03-20',
+      title: '数学思维班',
+      startTime: '14:00',
+      endTime: '16:00',
+      type: 'class',
+    },
+    {
+      id: 3,
+      date: '2024-03-21',
+      title: '英语口语班',
+      startTime: '10:00',
+      endTime: '12:00',
+      type: 'class',
+    },
+  ];
 
   // 加载教师详情
   const loadTeacherDetail = async () => {
@@ -165,7 +260,29 @@ export function Component() {
     loadTeacherDetail();
     loadCertificates();
     loadSchedules();
+    loadSalaryConfigs();
+    loadScheduleEvents();
   }, [teacherId]);
+
+  // 加载课酬配置
+  const loadSalaryConfigs = async () => {
+    try {
+      // TODO: 替换为实际API调用
+      setSalaryConfigs(mockSalaryConfigs);
+    } catch (error) {
+      message.error('加载课酬配置失败');
+    }
+  };
+
+  // 加载排班事件
+  const loadScheduleEvents = async () => {
+    try {
+      // TODO: 替换为实际API调用
+      setScheduleEvents(mockScheduleEvents);
+    } catch (error) {
+      message.error('加载排班事件失败');
+    }
+  };
 
   // 返回列表
   const handleBack = () => {
@@ -283,6 +400,98 @@ export function Component() {
     }
   };
 
+  // 新增课酬配置
+  const handleAddSalary = () => {
+    setEditingSalary(undefined);
+    salaryForm.resetFields();
+    setSalaryModalVisible(true);
+  };
+
+  // 编辑课酬配置
+  const handleEditSalary = (salary: SalaryConfig) => {
+    setEditingSalary(salary);
+    salaryForm.setFieldsValue({
+      ...salary,
+      effectiveDate: salary.effectiveDate ? dayjs(salary.effectiveDate) : undefined,
+    });
+    setSalaryModalVisible(true);
+  };
+
+  // 删除课酬配置
+  const handleDeleteSalary = async (salaryId: number) => {
+    try {
+      // TODO: 替换为实际API调用
+      message.success('删除成功');
+      loadSalaryConfigs();
+    } catch (error) {
+      message.error('删除失败');
+    }
+  };
+
+  // 提交课酬配置表单
+  const handleSalarySubmit = async () => {
+    try {
+      const values = await salaryForm.validateFields();
+      // TODO: 替换为实际API调用
+      message.success(editingSalary ? '更新成功' : '创建成功');
+      setSalaryModalVisible(false);
+      loadSalaryConfigs();
+    } catch (error: any) {
+      message.error(error.message || '操作失败');
+    }
+  };
+
+  // 打开可用时间配置
+  const handleConfigAvailableTime = () => {
+    availableTimeForm.resetFields();
+    setAvailableTimeModalVisible(true);
+  };
+
+  // 提交可用时间配置
+  const handleAvailableTimeSubmit = async () => {
+    try {
+      const values = await availableTimeForm.validateFields();
+      // TODO: 替换为实际API调用
+      message.success('配置成功');
+      setAvailableTimeModalVisible(false);
+      loadSchedules();
+    } catch (error: any) {
+      message.error(error.message || '操作失败');
+    }
+  };
+
+  // 下载证书
+  const handleDownloadCert = (cert: Certificate) => {
+    if (cert.fileUrl) {
+      window.open(cert.fileUrl, '_blank');
+    } else {
+      message.warning('该证书暂无文件');
+    }
+  };
+
+  // 日历单元格渲染
+  const dateCellRender = (value: Dayjs) => {
+    const dateStr = value.format('YYYY-MM-DD');
+    const events = scheduleEvents.filter((e) => e.date === dateStr);
+
+    return (
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        {events.map((event) => (
+          <li key={event.id}>
+            <Badge
+              status={event.type === 'class' ? 'success' : 'processing'}
+              text={
+                <span style={{ fontSize: 12, color: 'rgba(255, 255, 255, 0.85)' }}>
+                  {event.startTime} {event.title}
+                </span>
+              }
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   // 证书表格列
   const certColumns: ColumnsType<Certificate> = [
     {
@@ -320,23 +529,43 @@ export function Component() {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 180,
       align: 'center',
       render: (_, record) => (
         <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            style={{ color: '#00d4ff' }}
-            onClick={() => handleEditCert(record)}
-          />
+          <Tooltip title="查看">
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              style={{ color: '#00d4ff' }}
+              onClick={() => handleDownloadCert(record)}
+            />
+          </Tooltip>
+          <Tooltip title="下载">
+            <Button
+              type="text"
+              icon={<DownloadOutlined />}
+              style={{ color: '#00ff88' }}
+              onClick={() => handleDownloadCert(record)}
+            />
+          </Tooltip>
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              style={{ color: '#00d4ff' }}
+              onClick={() => handleEditCert(record)}
+            />
+          </Tooltip>
           <Popconfirm
             title="确定要删除这个证书吗？"
             onConfirm={() => handleDeleteCert(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="text" icon={<DeleteOutlined />} style={{ color: '#ff4d6a' }} />
+            <Tooltip title="删除">
+              <Button type="text" icon={<DeleteOutlined />} style={{ color: '#ff4d6a' }} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -399,6 +628,76 @@ export function Component() {
             cancelText="取消"
           >
             <Button type="text" icon={<DeleteOutlined />} style={{ color: '#ff4d6a' }} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  // 课酬配置表格列
+  const salaryColumns: ColumnsType<SalaryConfig> = [
+    {
+      title: '课程类型',
+      dataIndex: 'courseType',
+      key: 'courseType',
+      render: (text: string) => <span style={{ color: '#fff' }}>{text}</span>,
+    },
+    {
+      title: '课时费（元/小时）',
+      dataIndex: 'hourlyRate',
+      key: 'hourlyRate',
+      render: (rate: number) => (
+        <span style={{ color: '#ffaa00', fontWeight: 600, fontSize: 16 }}>
+          ¥{rate}
+        </span>
+      ),
+    },
+    {
+      title: '生效日期',
+      dataIndex: 'effectiveDate',
+      key: 'effectiveDate',
+      render: (text: string) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text}</span>,
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      render: (text: string) => (
+        <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text || '-'}</span>
+      ),
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 150,
+      align: 'center',
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="查看历史">
+            <Button
+              type="text"
+              icon={<HistoryOutlined />}
+              style={{ color: '#00d4ff' }}
+              onClick={() => message.info('查看历史功能开发中')}
+            />
+          </Tooltip>
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              style={{ color: '#00d4ff' }}
+              onClick={() => handleEditSalary(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="确定要删除这个配置吗？"
+            onConfirm={() => handleDeleteSalary(record.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Tooltip title="删除">
+              <Button type="text" icon={<DeleteOutlined />} style={{ color: '#ff4d6a' }} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -531,7 +830,7 @@ export function Component() {
         </div>
       </Card>
 
-      {/* 证书和排班 */}
+      {/* 证书、排班、课酬、可用时间 */}
       <div style={styles.tabCard}>
         <Tabs defaultActiveKey="certificates">
           <TabPane
@@ -566,31 +865,125 @@ export function Component() {
           <TabPane
             tab={
               <span>
-                <CalendarOutlined />
-                排班管理
+                <ClockCircleOutlined />
+                可用时间
               </span>
             }
-            key="schedules"
+            key="availableTime"
+          >
+            <div style={{ marginBottom: 16 }}>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={handleConfigAvailableTime}
+                  style={styles.actionButton}
+                >
+                  配置可用时间
+                </Button>
+                <Text style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
+                  设置教师每周的可用时间段
+                </Text>
+              </Space>
+            </div>
+            <Card
+              style={{
+                background: 'rgba(0, 212, 255, 0.05)',
+                border: '1px solid rgba(0, 212, 255, 0.1)',
+              }}
+            >
+              <Title level={5} style={{ color: '#fff', marginBottom: 16 }}>
+                每周可用时间
+              </Title>
+              <Table
+                columns={scheduleColumns}
+                dataSource={schedules}
+                rowKey="id"
+                pagination={false}
+                style={{
+                  background: '#111827',
+                }}
+              />
+            </Card>
+          </TabPane>
+          <TabPane
+            tab={
+              <span>
+                <DollarOutlined />
+                课酬配置
+              </span>
+            }
+            key="salary"
           >
             <div style={{ marginBottom: 16 }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
-                onClick={handleAddSchedule}
+                onClick={handleAddSalary}
                 style={styles.actionButton}
               >
-                新增排班
+                新增课酬配置
               </Button>
             </div>
             <Table
-              columns={scheduleColumns}
-              dataSource={schedules}
+              columns={salaryColumns}
+              dataSource={salaryConfigs}
               rowKey="id"
               pagination={false}
               style={{
                 background: '#111827',
               }}
             />
+          </TabPane>
+          <TabPane
+            tab={
+              <span>
+                <CalendarOutlined />
+                排班信息
+              </span>
+            }
+            key="scheduleCalendar"
+          >
+            <Card
+              style={{
+                background: 'rgba(0, 212, 255, 0.05)',
+                border: '1px solid rgba(0, 212, 255, 0.1)',
+              }}
+            >
+              <Calendar
+                dateCellRender={dateCellRender}
+                value={selectedDate}
+                onChange={setSelectedDate}
+                style={{
+                  background: '#111827',
+                }}
+              />
+            </Card>
+            <Divider style={{ borderColor: 'rgba(0, 212, 255, 0.1)' }} />
+            <div style={{ marginTop: 16 }}>
+              <Title level={5} style={{ color: '#fff', marginBottom: 16 }}>
+                排班列表
+              </Title>
+              <div style={{ marginBottom: 16 }}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleAddSchedule}
+                  style={styles.actionButton}
+                >
+                  新增排班
+                </Button>
+              </div>
+              <Table
+                columns={scheduleColumns}
+                dataSource={schedules}
+                rowKey="id"
+                pagination={false}
+                style={{
+                  background: '#111827',
+                }}
+              />
+            </div>
           </TabPane>
         </Tabs>
       </div>
@@ -710,6 +1103,133 @@ export function Component() {
               <Option value={2}>分部校区</Option>
             </Select>
           </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 课酬配置表单弹窗 */}
+      <Modal
+        title={editingSalary ? '编辑课酬配置' : '新增课酬配置'}
+        open={salaryModalVisible}
+        onOk={handleSalarySubmit}
+        onCancel={() => setSalaryModalVisible(false)}
+        width={600}
+        okText="提交"
+        cancelText="取消"
+        styles={{
+          body: { background: '#111827' },
+          header: { background: '#111827', borderBottom: '1px solid rgba(0, 212, 255, 0.1)' },
+        }}
+      >
+        <Form form={salaryForm} layout="vertical">
+          <Form.Item
+            label="课程类型"
+            name="courseType"
+            rules={[{ required: true, message: '请输入课程类型' }]}
+          >
+            <Input placeholder="请输入课程类型" />
+          </Form.Item>
+          <Form.Item
+            label="课时费（元/小时）"
+            name="hourlyRate"
+            rules={[{ required: true, message: '请输入课时费' }]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              precision={2}
+              placeholder="请输入课时费"
+              prefix="¥"
+            />
+          </Form.Item>
+          <Form.Item
+            label="生效日期"
+            name="effectiveDate"
+            rules={[{ required: true, message: '请选择生效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+          </Form.Item>
+          <Form.Item label="备注" name="remark">
+            <TextArea rows={3} placeholder="请输入备注信息" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 可用时间配置弹窗 */}
+      <Modal
+        title="配置可用时间"
+        open={availableTimeModalVisible}
+        onOk={handleAvailableTimeSubmit}
+        onCancel={() => setAvailableTimeModalVisible(false)}
+        width={700}
+        okText="保存"
+        cancelText="取消"
+        styles={{
+          body: { background: '#111827' },
+          header: { background: '#111827', borderBottom: '1px solid rgba(0, 212, 255, 0.1)' },
+        }}
+      >
+        <Form form={availableTimeForm} layout="vertical">
+          <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 16 }}>
+            设置教师每周的可用时间段，系统将根据这些时间段进行排课
+          </div>
+          {Object.entries(weekDayMap).map(([key, value]) => (
+            <Card
+              key={key}
+              size="small"
+              style={{
+                background: 'rgba(0, 212, 255, 0.05)',
+                border: '1px solid rgba(0, 212, 255, 0.1)',
+                marginBottom: 12,
+              }}
+            >
+              <Row gutter={16} align="middle">
+                <Col span={4}>
+                  <Text style={{ color: '#00d4ff', fontWeight: 600 }}>{value}</Text>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name={[`day${key}`, 'startTime']}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <TimePicker
+                      style={{ width: '100%' }}
+                      format="HH:mm"
+                      placeholder="开始时间"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={1} style={{ textAlign: 'center' }}>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.45)' }}>-</Text>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name={[`day${key}`, 'endTime']}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <TimePicker
+                      style={{ width: '100%' }}
+                      format="HH:mm"
+                      placeholder="结束时间"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={3}>
+                  <Button
+                    type="link"
+                    size="small"
+                    style={{ color: '#ff4d6a' }}
+                    onClick={() => {
+                      availableTimeForm.setFieldsValue({
+                        [`day${key}`]: { startTime: undefined, endTime: undefined },
+                      });
+                    }}
+                  >
+                    清除
+                  </Button>
+                </Col>
+              </Row>
+            </Card>
+          ))}
         </Form>
       </Modal>
     </div>
