@@ -584,7 +584,7 @@ export default function ClassroomManagement() {
           }}
           onChange={handleTableChange}
           showRefresh={false}
-          showExport={true}
+          exportable={true}
           onExport={handleExport}
           scroll={{ x: 1400 }}
         />

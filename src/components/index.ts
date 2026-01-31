@@ -1,6 +1,6 @@
 // 通用组件导出
 export { CommonTable } from './CommonTable';
-export type { CommonTableProps } from './CommonTable';
+export type { CommonTableProps, FetchParams, PageResult, ExportConfig } from './CommonTable';
 
 export { CommonForm } from './CommonForm';
 export type { CommonFormProps } from './CommonForm';

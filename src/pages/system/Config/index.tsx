@@ -666,7 +666,7 @@ export default function SystemConfigManagement() {
           }}
           onChange={handleTableChange}
           showRefresh={false}
-          showExport={true}
+          exportable={true}
           onExport={handleExport}
           scroll={{ x: 1600 }}
         />

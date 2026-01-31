@@ -57,6 +57,18 @@ const router = createBrowserRouter([
           },
         ],
       },
+      // 通知管理
+      {
+        path: 'notification',
+        children: [
+          {
+            path: 'message',
+            lazy: async () => ({
+              Component: (await import('@/pages/notification/message')).default
+            }),
+          },
+        ],
+      },
       // 学生管理
       {
         path: 'student',

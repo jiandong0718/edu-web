@@ -616,7 +616,7 @@ export default function HolidayManagement() {
               }}
               onChange={handleTableChange}
               showRefresh={false}
-              showExport={true}
+              exportable={true}
               onExport={handleExport}
               scroll={{ x: 1200 }}
             />

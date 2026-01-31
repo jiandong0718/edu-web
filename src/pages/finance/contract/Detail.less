@@ -1,6 +1,6 @@
 .contract-detail {
   padding: 24px;
-  background: #111827;
+  background: #0a0e1a;
   min-height: 100vh;
 
   .stat-card {
@@ -22,117 +22,176 @@
     }
   }
 
-  .info-card,
-  .detail-card,
-  .payment-card,
-  .account-card,
-  .refund-card {
-    background: linear-gradient(135deg, #1a1f2e 0%, #252b3b 100%);
-    border: 1px solid rgba(0, 212, 255, 0.2);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  :global {
+    // Breadcrumb样式
+    .ant-breadcrumb {
+      color: rgba(255, 255, 255, 0.65);
 
-    :global {
-      .ant-card-head {
-        border-bottom: 1px solid rgba(0, 212, 255, 0.2);
-        color: #fff;
+      .ant-breadcrumb-link {
+        color: rgba(255, 255, 255, 0.65);
 
-        .ant-card-head-title {
-          color: #fff;
-          font-size: 16px;
-          font-weight: 600;
+        &:hover {
+          color: #00d4ff;
         }
       }
+
+      .ant-breadcrumb-separator {
+        color: rgba(255, 255, 255, 0.45);
+      }
+    }
+
+    // Card样式
+    .ant-card {
+      background: linear-gradient(135deg, #1a1f2e 0%, #252b3b 100%);
+      border: 1px solid rgba(0, 212, 255, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
       .ant-card-body {
         color: rgba(255, 255, 255, 0.85);
       }
+    }
 
-      .ant-descriptions-bordered .ant-descriptions-item-label {
+    // Tabs样式
+    .ant-tabs {
+      color: rgba(255, 255, 255, 0.85);
+
+      .ant-tabs-nav {
+        &::before {
+          border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        }
+      }
+
+      .ant-tabs-tab {
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 15px;
+        font-weight: 500;
+
+        &:hover {
+          color: #00d4ff;
+        }
+
+        &.ant-tabs-tab-active {
+          .ant-tabs-tab-btn {
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+          }
+        }
+      }
+
+      .ant-tabs-ink-bar {
+        background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+        height: 3px;
+        border-radius: 3px;
+      }
+
+      .ant-tabs-content {
+        padding-top: 24px;
+      }
+    }
+
+    // Descriptions样式
+    .ant-descriptions-bordered {
+      .ant-descriptions-item-label {
         background: rgba(0, 212, 255, 0.05);
         color: rgba(255, 255, 255, 0.65);
         border-right: 1px solid rgba(0, 212, 255, 0.2);
+        font-weight: 500;
       }
 
-      .ant-descriptions-bordered .ant-descriptions-item-content {
+      .ant-descriptions-item-content {
         background: rgba(0, 0, 0, 0.2);
         color: rgba(255, 255, 255, 0.85);
       }
 
-      .ant-descriptions-bordered .ant-descriptions-row {
+      .ant-descriptions-row {
         border-bottom: 1px solid rgba(0, 212, 255, 0.2);
       }
 
-      .ant-table {
-        background: transparent;
-        color: rgba(255, 255, 255, 0.85);
+      thead th {
+        background: rgba(0, 212, 255, 0.1);
+        border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+      }
+    }
 
-        .ant-table-thead > tr > th {
-          background: rgba(0, 212, 255, 0.1);
-          color: #fff;
+    // Table样式
+    .ant-table {
+      background: transparent;
+      color: rgba(255, 255, 255, 0.85);
+
+      .ant-table-thead > tr > th {
+        background: rgba(0, 212, 255, 0.1);
+        color: #fff;
+        border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .ant-table-tbody > tr > td {
+        border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .ant-table-tbody > tr:hover > td {
+        background: rgba(0, 212, 255, 0.05);
+      }
+
+      .ant-table-summary {
+        background: rgba(0, 212, 255, 0.05);
+
+        .ant-table-cell {
           border-bottom: 1px solid rgba(0, 212, 255, 0.3);
           font-weight: 600;
         }
+      }
+    }
 
-        .ant-table-tbody > tr > td {
-          border-bottom: 1px solid rgba(0, 212, 255, 0.1);
-          color: rgba(255, 255, 255, 0.85);
-        }
+    // Button样式
+    .ant-btn {
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.3s;
 
-        .ant-table-tbody > tr:hover > td {
-          background: rgba(0, 212, 255, 0.05);
+      &.ant-btn-link {
+        color: #00d4ff;
+
+        &:hover {
+          color: #00e5ff;
         }
       }
 
-      .ant-timeline-item-content {
+      &:not(.ant-btn-dangerous):not(.ant-btn-link) {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: rgba(255, 255, 255, 0.85);
 
-        p {
-          margin-bottom: 8px;
-          line-height: 1.6;
-
-          strong {
-            color: rgba(255, 255, 255, 0.65);
-            margin-right: 8px;
-          }
+        &:hover {
+          background: rgba(255, 255, 255, 0.15);
+          border-color: rgba(0, 212, 255, 0.5);
+          color: #00d4ff;
         }
       }
 
-      .ant-btn {
-        border-radius: 4px;
-        font-weight: 500;
-        transition: all 0.3s;
+      &.ant-btn-dangerous {
+        background: linear-gradient(135deg, #ff4d6a 0%, #ff1744 100%);
+        border: none;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(255, 77, 106, 0.3);
 
-        &:not(.ant-btn-dangerous) {
-          background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
-          border: none;
-          color: #fff;
-          box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
-
-          &:hover {
-            background: linear-gradient(135deg, #00e5ff 0%, #00aaff 100%);
-            box-shadow: 0 4px 12px rgba(0, 212, 255, 0.5);
-            transform: translateY(-2px);
-          }
-        }
-
-        &.ant-btn-dangerous {
-          background: linear-gradient(135deg, #ff4d6a 0%, #ff1744 100%);
-          border: none;
-          color: #fff;
-          box-shadow: 0 2px 8px rgba(255, 77, 106, 0.3);
-
-          &:hover {
-            background: linear-gradient(135deg, #ff5e7a 0%, #ff2854 100%);
-            box-shadow: 0 4px 12px rgba(255, 77, 106, 0.5);
-            transform: translateY(-2px);
-          }
+        &:hover {
+          background: linear-gradient(135deg, #ff5e7a 0%, #ff2854 100%);
+          box-shadow: 0 4px 12px rgba(255, 77, 106, 0.5);
+          transform: translateY(-2px);
         }
       }
+    }
 
-      .ant-progress-bg {
-        background: linear-gradient(90deg, #00d4ff 0%, #00ff88 100%);
-      }
+    // Tag样式
+    .ant-tag {
+      border-radius: 4px;
+      padding: 2px 10px;
+      font-weight: 500;
     }
   }
 }
+

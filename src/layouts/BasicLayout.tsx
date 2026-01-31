@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Avatar, Dropdown, Space, Badge, Tooltip } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Space, Tooltip } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -12,13 +12,13 @@ import {
   ReadOutlined,
   DollarOutlined,
   PhoneOutlined,
-  BellOutlined,
   SearchOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useUserStore, useAppStore } from '@/stores';
+import NotificationBell from '@/components/NotificationBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -38,6 +38,7 @@ const menuItems: MenuProps['items'] = [
       { key: '/system/menu', label: '菜单管理' },
       { key: '/system/campus', label: '校区管理' },
       { key: '/system/dict', label: '字典管理' },
+      { key: '/notification/message', label: '消息中心' },
     ],
   },
   {
@@ -359,13 +360,7 @@ const BasicLayout: React.FC = () => {
                 {isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
               </div>
             </Tooltip>
-            <Tooltip title="通知">
-              <Badge dot className="notification-badge">
-                <div className="header-icon" style={styles.iconButton}>
-                  <BellOutlined />
-                </div>
-              </Badge>
-            </Tooltip>
+            <NotificationBell className="header-icon" style={styles.iconButton} />
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Space style={{ cursor: 'pointer', marginLeft: 8 }}>
                 <Avatar

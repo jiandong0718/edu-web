@@ -611,7 +611,7 @@ export default function Component() {
           }}
           onChange={handleTableChange}
           showRefresh={false}
-          showExport={false}
+          exportable={false}
         />
       </Card>
     </div>

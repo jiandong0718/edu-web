@@ -567,7 +567,7 @@ export function Component() {
           }}
           scroll={{ x: 1400 }}
           showRefresh={false}
-          showExport={false}
+          exportable={false}
         />
       </Card>
 

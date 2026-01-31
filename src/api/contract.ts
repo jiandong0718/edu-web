@@ -44,6 +44,11 @@ export const deleteContract = (id: number) => {
   return http.delete(`/finance/contract/${id}`);
 };
 
+// 作废合同
+export const cancelContract = (id: number) => {
+  return http.put(`/finance/contract/${id}/cancel`);
+};
+
 // 获取合同明细列表
 export const getContractItems = (contractId: number) => {
   return http.get<ContractItem[]>(`/finance/contract/${contractId}/items`);
