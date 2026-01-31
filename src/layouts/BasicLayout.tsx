@@ -67,6 +67,7 @@ const menuItems: MenuProps['items'] = [
       { key: '/finance/contract', label: '合同管理' },
       { key: '/finance/payment', label: '收费管理' },
       { key: '/finance/consumption', label: '课时消耗' },
+      { key: '/finance/refund', label: '退费管理' },
     ],
   },
   {
@@ -77,6 +78,8 @@ const menuItems: MenuProps['items'] = [
       { key: '/marketing/lead', label: '线索管理' },
       { key: '/marketing/follow', label: '跟进记录' },
       { key: '/marketing/trial', label: '试听管理' },
+      { key: '/marketing/funnel', label: '招生漏斗' },
+      { key: '/marketing/consultant-ranking', label: '顾问业绩' },
     ],
   },
 ];

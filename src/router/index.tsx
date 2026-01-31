@@ -169,6 +169,12 @@ const router = createBrowserRouter([
               Component: (await import('@/pages/finance/consumption')).default
             }),
           },
+          {
+            path: 'refund',
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/refund')).default
+            }),
+          },
         ],
       },
       // 招生管理
@@ -203,6 +209,18 @@ const router = createBrowserRouter([
             path: 'trial',
             lazy: async () => ({
               Component: (await import('@/pages/marketing/trial')).default
+            }),
+          },
+          {
+            path: 'funnel',
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/funnel')).default
+            }),
+          },
+          {
+            path: 'consultant-ranking',
+            lazy: async () => ({
+              Component: (await import('@/pages/marketing/consultant-ranking')).default
             }),
           },
         ],
