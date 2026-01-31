@@ -68,6 +68,7 @@ const menuItems: MenuProps['items'] = [
       { key: '/finance/payment', label: '收费管理' },
       { key: '/finance/consumption', label: '课时消耗' },
       { key: '/finance/refund', label: '退费管理' },
+      { key: '/finance/class-hour/adjust', label: '课时调整' },
     ],
   },
   {

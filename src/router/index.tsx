@@ -175,6 +175,12 @@ const router = createBrowserRouter([
               Component: (await import('@/pages/finance/refund')).default
             }),
           },
+          {
+            path: 'class-hour/adjust',
+            lazy: async () => ({
+              Component: (await import('@/pages/finance/class-hour/adjust')).default
+            }),
+          },
         ],
       },
       // 招生管理
