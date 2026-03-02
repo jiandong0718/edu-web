@@ -1,73 +1,123 @@
-# 教育机构学生管理系统
+# edu-admin-web
 
-Education Student Management System - 一套完整的教育培训机构管理解决方案。
+教育机构学生管理系统 - 前端管理后台
 
-## 项目简介
+## 项目进度
 
-本系统面向教育培训机构，提供从招生、教学、财务到运营的全流程数字化管理能力。
+| 页面 | 状态 | 说明 |
+|------|------|------|
+| 登录页 | ✅ 完成 | 粒子动画背景、玻璃态卡片 |
+| Dashboard | ✅ 完成 | 统计卡片、Canvas图表、环形进度图 |
+| 学生管理 | ✅ 完成 | 列表CRUD、批量操作、筛选 |
+| 用户管理 | ✅ 完成 | 用户列表、角色分配 |
+| 合同管理 | ✅ 完成 | 合同列表、状态管理 |
+| 课程管理 | ✅ 完成 | 课程列表、分类管理 |
+| 布局组件 | ✅ 完成 | 深色侧边栏、玻璃态Header |
 
-### 核心功能
+## 设计风格
 
-- **招生管理**：线索管理、试听安排、转化跟踪
-- **学员管理**：学员档案、联系人、标签分组
-- **教学管理**：课程、班级、排课、考勤、作业
-- **财务管理**：合同、收费、退费、课时消耗
-- **运营支撑**：消息通知、营销活动、数据看板
+- **主题**: 深色科技风格
+- **主色调**: 青色渐变 (#00d4ff → #0099ff)
+- **背景色**: 深色系 (#0a0e17, #111827, #1a2332)
+- **特效**: 粒子动画、发光边框、玻璃态毛玻璃效果
+
+## 技术栈
+
+- React 18+
+- TypeScript
+- Vite
+- Ant Design 5.x
+- Ant Design Pro Components
+- Zustand (状态管理)
+- Axios (HTTP 请求)
+- React Router 6
 
 ## 项目结构
 
 ```
-edu/
-├── edu-admin-api/     # 后端服务 (Java + Spring Boot)
-├── edu-admin-web/     # 前端管理后台 (React + Ant Design Pro)
-└── docs/              # 项目文档
+edu-admin-web/
+├── src/
+│   ├── api/           # API 接口定义
+│   ├── components/    # 公共组件
+│   ├── hooks/         # 自定义 Hooks
+│   ├── layouts/       # 布局组件
+│   ├── pages/         # 页面组件
+│   ├── stores/        # Zustand 状态管理
+│   ├── utils/         # 工具函数
+│   ├── App.tsx        # 应用入口
+│   └── main.tsx       # 主入口
+├── public/            # 静态资源
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
 ```
 
-## 技术栈
+## 环境要求
 
-### 后端
-- Java 17+
-- Spring Boot 3.x
-- MyBatis-Plus
-- MySQL 8.0+
-- Redis
-
-### 前端
-- React 18+
-- TypeScript
-- Vite
-- Ant Design Pro
-- Zustand
+- Node.js 18+
+- npm 9+ 或 pnpm 8+
 
 ## 快速开始
 
-### 环境要求
-
-- JDK 17+
-- Node.js 18+
-- MySQL 8.0+
-- Redis 6.0+
-- Maven 3.8+
-
-### 后端启动
+### 安装依赖
 
 ```bash
-cd edu-admin-api
-mvn clean install
-mvn spring-boot:run -pl edu-admin
+npm install
 ```
 
-### 前端启动
+### 开发模式
 
 ```bash
-cd edu-admin-web
-npm install
 npm run dev
+```
+
+访问 http://localhost:5173
+
+### 构建生产版本
+
+```bash
+npm run build
+```
+
+### 预览生产版本
+
+```bash
+npm run preview
 ```
 
 ## 开发规范
 
-详见各子项目的 README.md 文档。
+### 目录命名
+
+- 组件目录使用 PascalCase：`UserList/`
+- 工具函数使用 camelCase：`formatDate.ts`
+- 常量文件使用 UPPER_CASE：`API_URLS.ts`
+
+### 组件规范
+
+- 使用函数组件 + Hooks
+- Props 使用 TypeScript 接口定义
+- 复杂组件拆分为子组件
+
+### 状态管理
+
+- 全局状态使用 Zustand
+- 组件内状态使用 useState/useReducer
+- 服务端状态考虑使用 React Query（可选）
+
+### API 调用
+
+- 统一使用 `src/api/` 下的接口
+- 使用 Axios 实例，统一处理错误和 Token
+
+## 环境变量
+
+创建 `.env.local` 文件：
+
+```
+VITE_API_BASE_URL=http://localhost:8080
+```
 
 ## License
 

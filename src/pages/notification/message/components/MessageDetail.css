@@ -1,0 +1,146 @@
+.message-detail-drawer .ant-drawer-header {
+  background: linear-gradient(180deg, #0f1419 0%, #0a0e17 100%);
+  border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+}
+
+.message-detail-drawer .ant-drawer-title {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.message-detail-drawer .ant-drawer-body {
+  background: #111827;
+  padding: 0;
+}
+
+.message-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.message-type-icon {
+  font-size: 20px;
+}
+
+.message-detail-content {
+  padding: 24px;
+}
+
+.message-detail-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+}
+
+.message-detail-title h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.message-detail-meta {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  border-radius: 8px;
+}
+
+.message-detail-meta .ant-descriptions-item-label {
+  color: rgba(255, 255, 255, 0.65);
+  font-weight: 500;
+}
+
+.message-detail-meta .ant-descriptions-item-label span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-detail-meta .ant-descriptions-item-content {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.message-detail-body {
+  margin-bottom: 24px;
+}
+
+.message-content-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 12px;
+}
+
+.message-content-text {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 212, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message-related-info {
+  padding: 16px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 8px;
+}
+
+.related-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 12px;
+}
+
+.related-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 14px;
+}
+
+/* 标签样式 */
+.message-detail-drawer .ant-tag {
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+}
+
+/* 按钮样式 */
+.message-detail-drawer .ant-btn-primary {
+  background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+
+.message-detail-drawer .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #00e5ff 0%, #00aaff 100%);
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.4);
+}
+
+.message-detail-drawer .ant-btn-dangerous {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  color: #ff4d4f;
+}
+
+.message-detail-drawer .ant-btn-dangerous:hover {
+  background: rgba(255, 77, 79, 0.2);
+  border-color: #ff4d4f;
+  color: #ff4d4f;
+}

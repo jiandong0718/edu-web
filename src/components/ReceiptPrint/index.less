@@ -1,0 +1,179 @@
+.receipt-print-modal {
+  .print-settings {
+    padding: 16px;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  .receipt-preview {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-height: 600px;
+    overflow-y: auto;
+
+    &.A4 {
+      width: 100%;
+    }
+
+    &.A5 {
+      width: 70%;
+      margin: 0 auto;
+    }
+
+    &.landscape {
+      .receipt-container {
+        max-width: 900px;
+      }
+    }
+  }
+
+  .receipt-container {
+    max-width: 700px;
+    margin: 0 auto;
+    border: 2px solid #000;
+    padding: 30px;
+    background: #fff;
+    color: #000;
+  }
+
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 30px;
+
+    .receipt-title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #000;
+    }
+
+    .receipt-no {
+      font-size: 14px;
+      color: #666;
+    }
+  }
+
+  .receipt-section {
+    margin: 20px 0;
+  }
+
+  .receipt-row {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+
+    .label {
+      font-weight: bold;
+      width: 120px;
+      display: inline-block;
+      color: #000;
+    }
+
+    .value {
+      flex: 1;
+      border-bottom: 1px solid #000;
+      padding: 0 10px;
+      min-height: 24px;
+      color: #000;
+    }
+  }
+
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+
+    th,
+    td {
+      border: 1px solid #000;
+      padding: 8px;
+      text-align: left;
+      color: #000;
+    }
+
+    th {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+  }
+
+  .amount-section {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+
+    .amount-large {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d00;
+      text-align: center;
+      margin: 10px 0;
+    }
+  }
+
+  .receipt-footer {
+    margin-top: 50px;
+  }
+
+  .signature-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+
+    .signature-item {
+      text-align: center;
+      color: #000;
+
+      .signature-line {
+        display: inline-block;
+        width: 150px;
+        border-bottom: 1px solid #000;
+        margin-top: 40px;
+      }
+    }
+  }
+
+  .institution-info {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px dashed #999;
+    font-size: 12px;
+    color: #666;
+
+    div {
+      margin: 5px 0;
+    }
+  }
+}
+
+// 打印样式
+@media print {
+  .receipt-print-modal {
+    .print-settings {
+      display: none !important;
+    }
+
+    .receipt-preview {
+      max-height: none;
+      overflow: visible;
+      padding: 0;
+      background: #fff;
+    }
+
+    .receipt-container {
+      border: 2px solid #000;
+      page-break-after: always;
+    }
+  }
+
+  // 隐藏其他元素
+  .ant-modal-header,
+  .ant-modal-footer,
+  .ant-modal-close {
+    display: none !important;
+  }
+}
