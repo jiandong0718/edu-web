@@ -86,6 +86,22 @@ npm run build
 npm run preview
 ```
 
+## 提交前校验规则
+
+每次 `git commit` 前会自动执行仓库边界校验，防止 `edu-web` 与 `edu-server` 误混提，并阻止 `.agent/.claude/.cursorrules` 进入提交。
+
+### 安装提交钩子（首次一次）
+
+```bash
+npm run setup:hooks
+```
+
+### 手动执行一次校验
+
+```bash
+npm run verify:boundary
+```
+
 ## 开发规范
 
 ### 目录命名
