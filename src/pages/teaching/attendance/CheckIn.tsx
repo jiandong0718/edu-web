@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   Select,
@@ -24,13 +24,16 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { getClassCourseInfo, checkIn, batchCheckIn } from '@/api/attendance';
+import { getClassList } from '@/api/class';
+import { getScheduleList } from '@/api/schedule';
+import type { Class } from '@/types/class';
+import type { Schedule } from '@/types/schedule';
 import type {
   StudentCheckInInfo,
   AttendanceStatus,
   ClassCourseInfo,
 } from '@/types/attendance';
 
-// 样式定义
 const styles = {
   pageHeader: {
     display: 'flex',
@@ -65,6 +68,7 @@ const styles = {
     background: 'rgba(0, 212, 255, 0.05)',
     borderRadius: 10,
     border: '1px solid rgba(0, 212, 255, 0.1)',
+    flexWrap: 'wrap' as const,
   },
   infoItem: {
     display: 'flex',
@@ -87,7 +91,6 @@ const styles = {
   },
 };
 
-// 状态配置
 const statusConfig = {
   present: {
     color: '#00ff88',
@@ -115,30 +118,105 @@ const statusConfig = {
   },
 };
 
+interface Option {
+  value: number;
+  label: string;
+}
+
+const normalizeClassList = (response: unknown): Class[] => {
+  const raw = response as { list?: Class[]; data?: { list?: Class[] } } | undefined;
+
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+
+  return [];
+};
+
+const normalizeScheduleList = (response: unknown): Schedule[] => {
+  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
+
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+
+  return [];
+};
+
+function formatScheduleLabel(schedule: Schedule): string {
+  const start = schedule.startTime || '';
+  const end = schedule.endTime || '';
+
+  if (start && end) {
+    return `${start} ~ ${end}`;
+  }
+
+  return start || end || `课次#${schedule.id}`;
+}
+
 function CheckInPage() {
   const [loading, setLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [classId, setClassId] = useState<number>();
   const [scheduleId, setScheduleId] = useState<number>();
   const [courseInfo, setCourseInfo] = useState<ClassCourseInfo | null>(null);
+  const [classOptions, setClassOptions] = useState<Option[]>([]);
+  const [scheduleOptions, setScheduleOptions] = useState<Option[]>([]);
+  const [optionLoading, setOptionLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStudent, setCurrentStudent] = useState<StudentCheckInInfo | null>(null);
   const [form] = Form.useForm();
 
-  // 模拟班级和课程数据
-  const mockClasses = [
-    { value: 1, label: '少儿编程初级班' },
-    { value: 2, label: '数学思维提升班' },
-    { value: 3, label: '英语口语班' },
-  ];
+  const loadClassOptions = async () => {
+    setOptionLoading(true);
+    try {
+      const response = await getClassList({ page: 1, pageSize: 200 });
+      const classes = normalizeClassList(response);
+      setClassOptions(
+        classes.map((item) => ({
+          value: item.id,
+          label: item.name,
+        }))
+      );
+    } catch {
+      message.error('加载班级列表失败');
+    } finally {
+      setOptionLoading(false);
+    }
+  };
 
-  const mockSchedules = [
-    { value: 1, label: '2024-01-31 09:00-11:00' },
-    { value: 2, label: '2024-01-31 14:00-16:00' },
-    { value: 3, label: '2024-02-01 09:00-11:00' },
-  ];
+  const loadScheduleOptions = async (selectedClassId: number) => {
+    setOptionLoading(true);
+    try {
+      const response = await getScheduleList({
+        pageNum: 1,
+        pageSize: 200,
+        classId: selectedClassId,
+      });
 
-  // 加载班级课程信息
+      const schedules = normalizeScheduleList(response);
+      setScheduleOptions(
+        schedules.map((item) => ({
+          value: item.id,
+          label: formatScheduleLabel(item),
+        }))
+      );
+    } catch {
+      message.error('加载课程安排失败');
+      setScheduleOptions([]);
+    } finally {
+      setOptionLoading(false);
+    }
+  };
+
   const loadCourseInfo = async () => {
     if (!classId || !scheduleId) {
       return;
@@ -148,18 +226,35 @@ function CheckInPage() {
     try {
       const data = await getClassCourseInfo(classId, scheduleId);
       setCourseInfo(data);
-    } catch (error) {
+    } catch {
       message.error('加载课程信息失败');
+      setCourseInfo(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCourseInfo();
+    void loadClassOptions();
+  }, []);
+
+  useEffect(() => {
+    if (!classId) {
+      setScheduleOptions([]);
+      setScheduleId(undefined);
+      setCourseInfo(null);
+      return;
+    }
+
+    setScheduleId(undefined);
+    setCourseInfo(null);
+    void loadScheduleOptions(classId);
+  }, [classId]);
+
+  useEffect(() => {
+    void loadCourseInfo();
   }, [classId, scheduleId]);
 
-  // 表格列定义
   const columns: ColumnsType<StudentCheckInInfo> = [
     {
       title: '学员信息',
@@ -263,7 +358,6 @@ function CheckInPage() {
     },
   ];
 
-  // 单个签到
   const handleSingleCheckIn = (student: StudentCheckInInfo) => {
     setCurrentStudent(student);
     form.setFieldsValue({
@@ -273,7 +367,6 @@ function CheckInPage() {
     setIsModalOpen(true);
   };
 
-  // 批量签到
   const handleBatchCheckIn = () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请选择要签到的学员');
@@ -287,7 +380,6 @@ function CheckInPage() {
     setIsModalOpen(true);
   };
 
-  // 提交签到
   const handleSubmit = async () => {
     if (!scheduleId) {
       message.error('请选择课程');
@@ -298,7 +390,6 @@ function CheckInPage() {
       const values = await form.validateFields();
 
       if (currentStudent) {
-        // 单个签到
         await checkIn({
           scheduleId,
           studentId: currentStudent.studentId,
@@ -307,7 +398,6 @@ function CheckInPage() {
         });
         message.success('签到成功');
       } else {
-        // 批量签到
         await batchCheckIn({
           scheduleId,
           studentIds: selectedRowKeys as number[],
@@ -319,8 +409,8 @@ function CheckInPage() {
       }
 
       setIsModalOpen(false);
-      loadCourseInfo();
-    } catch (error) {
+      await loadCourseInfo();
+    } catch {
       message.error('签到失败');
     }
   };
@@ -339,17 +429,23 @@ function CheckInPage() {
           <Select
             placeholder="选择班级"
             style={{ width: 200 }}
-            options={mockClasses}
+            options={classOptions}
             value={classId}
             onChange={setClassId}
+            loading={optionLoading}
+            showSearch
+            optionFilterProp="label"
           />
           <Select
             placeholder="选择课程"
-            style={{ width: 240 }}
-            options={mockSchedules}
+            style={{ width: 260 }}
+            options={scheduleOptions}
             value={scheduleId}
             onChange={setScheduleId}
             disabled={!classId}
+            loading={optionLoading}
+            showSearch
+            optionFilterProp="label"
           />
           <Button
             type="primary"
@@ -400,7 +496,7 @@ function CheckInPage() {
               selectedRowKeys,
               onChange: setSelectedRowKeys,
               getCheckboxProps: (record) => ({
-                disabled: !!record.status, // 已签到的不能再选
+                disabled: !!record.status,
               }),
             }}
             pagination={false}
@@ -411,12 +507,11 @@ function CheckInPage() {
         </Spin>
       </Card>
 
-      {/* 签到弹窗 */}
       <Modal
         title={currentStudent ? `签到 - ${currentStudent.studentName}` : '批量签到'}
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
-        onOk={handleSubmit}
+        onOk={() => void handleSubmit()}
         width={500}
       >
         <Form form={form} layout="vertical">

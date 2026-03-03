@@ -25,9 +25,16 @@ import {
 import dayjs, { Dayjs } from 'dayjs';
 import type { Schedule } from '@/types/schedule';
 import { getScheduleList } from '@/api/schedule';
+import { getClassList } from '@/api/class';
+import { getTeacherList } from '@/api/teacher';
+import { getClassroomList } from '@/api/classroom';
+import type { Class } from '@/types/class';
+import type { Teacher } from '@/types/teacher';
+import type { Classroom } from '@/types/classroom';
 
 type ViewType = 'class' | 'teacher' | 'classroom';
 type CalendarMode = 'month' | 'week';
+type Option = { label: string; value: number };
 
 // 样式定义
 const styles = {
@@ -116,6 +123,50 @@ const statusConfig = {
   rescheduled: { color: '#ffaa00', text: '已调课' },
 };
 
+const normalizeScheduleList = (response: unknown): Schedule[] => {
+  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
+const normalizeClassList = (response: unknown): Class[] => {
+  const raw = response as { list?: Class[]; data?: { list?: Class[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
+const normalizeTeacherList = (response: unknown): Teacher[] => {
+  const raw = response as { list?: Teacher[]; data?: { list?: Teacher[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
+const normalizeClassroomList = (response: unknown): Classroom[] => {
+  const raw = response as { list?: Classroom[]; data?: { list?: Classroom[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
 function ScheduleCalendar() {
   const [viewType, setViewType] = useState<ViewType>('class');
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
@@ -123,104 +174,52 @@ function ScheduleCalendar() {
   const [selectedId, setSelectedId] = useState<number | undefined>();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [classOptions, setClassOptions] = useState<Option[]>([]);
+  const [teacherOptions, setTeacherOptions] = useState<Option[]>([]);
+  const [classroomOptions, setClassroomOptions] = useState<Option[]>([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
 
-  // 模拟数据
-  const mockClasses = [
-    { label: '少儿编程初级班', value: 1 },
-    { label: '数学思维提升班', value: 2 },
-    { label: '英语口语班', value: 3 },
-  ];
-
-  const mockTeachers = [
-    { label: '张老师', value: 1 },
-    { label: '李老师', value: 2 },
-    { label: '王老师', value: 3 },
-  ];
-
-  const mockClassrooms = [
-    { label: '101教室', value: 1 },
-    { label: '102教室', value: 2 },
-    { label: '201教室', value: 3 },
-  ];
-
-  const mockSchedules: Schedule[] = [
-    {
-      id: 1,
-      classId: 1,
-      className: '少儿编程初级班',
-      courseId: 1,
-      courseName: 'Scratch编程基础',
-      teacherId: 1,
-      teacherName: '张老师',
-      classroomId: 1,
-      classroomName: '101教室',
-      startTime: '2026-02-01 09:00:00',
-      endTime: '2026-02-01 10:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-    {
-      id: 2,
-      classId: 2,
-      className: '数学思维提升班',
-      courseId: 2,
-      courseName: '数学思维训练',
-      teacherId: 2,
-      teacherName: '李老师',
-      classroomId: 2,
-      classroomName: '102教室',
-      startTime: '2026-02-01 14:00:00',
-      endTime: '2026-02-01 15:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-    {
-      id: 3,
-      classId: 1,
-      className: '少儿编程初级班',
-      courseId: 1,
-      courseName: 'Scratch编程基础',
-      teacherId: 1,
-      teacherName: '张老师',
-      classroomId: 1,
-      classroomName: '101教室',
-      startTime: '2026-02-03 09:00:00',
-      endTime: '2026-02-03 10:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-    {
-      id: 4,
-      classId: 3,
-      className: '英语口语班',
-      courseId: 3,
-      courseName: '英语口语交流',
-      teacherId: 3,
-      teacherName: '王老师',
-      classroomId: 3,
-      classroomName: '201教室',
-      startTime: '2026-02-02 10:00:00',
-      endTime: '2026-02-02 11:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-  ];
+  useEffect(() => {
+    void loadSchedules();
+  }, [viewType, selectedId, selectedDate]);
 
   useEffect(() => {
-    loadSchedules();
-  }, [viewType, selectedId, selectedDate]);
+    void loadOptions();
+  }, []);
+
+  const loadOptions = async () => {
+    setOptionsLoading(true);
+    try {
+      const [classesResponse, teachersResponse, classroomsResponse] = await Promise.all([
+        getClassList({ page: 1, pageSize: 500 }),
+        getTeacherList({ page: 1, pageSize: 500 }),
+        getClassroomList({ page: 1, pageSize: 500 }),
+      ]);
+
+      const classes = normalizeClassList(classesResponse);
+      const teachers = normalizeTeacherList(teachersResponse);
+      const classrooms = normalizeClassroomList(classroomsResponse);
+
+      setClassOptions(classes.map((item) => ({ label: item.name, value: item.id })));
+      setTeacherOptions(teachers.map((item) => ({ label: item.name, value: item.id })));
+      setClassroomOptions(classrooms.map((item) => ({ label: item.name, value: item.id })));
+    } catch {
+      setClassOptions([]);
+      setTeacherOptions([]);
+      setClassroomOptions([]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
 
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      // 实际项目中调用 API
-      const params: any = {
+      const params: Record<string, unknown> = {
+        pageNum: 1,
+        pageSize: 500,
         startDate: selectedDate.startOf('month').format('YYYY-MM-DD'),
         endDate: selectedDate.endOf('month').format('YYYY-MM-DD'),
       };
@@ -233,32 +232,20 @@ function ScheduleCalendar() {
         params.classroomId = selectedId;
       }
 
-      // const response = await getScheduleList(params);
-      // setSchedules(response.list);
-
-      // 使用模拟数据
-      setTimeout(() => {
-        let filtered = mockSchedules;
-        if (viewType === 'class' && selectedId) {
-          filtered = mockSchedules.filter((s) => s.classId === selectedId);
-        } else if (viewType === 'teacher' && selectedId) {
-          filtered = mockSchedules.filter((s) => s.teacherId === selectedId);
-        } else if (viewType === 'classroom' && selectedId) {
-          filtered = mockSchedules.filter((s) => s.classroomId === selectedId);
-        }
-        setSchedules(filtered);
-        setLoading(false);
-      }, 500);
-    } catch (error) {
+      const response = await getScheduleList(params);
+      setSchedules(normalizeScheduleList(response));
+    } catch {
+      setSchedules([]);
+    } finally {
       setLoading(false);
     }
   };
 
   // 获取选择器选项
   const getSelectOptions = () => {
-    if (viewType === 'class') return mockClasses;
-    if (viewType === 'teacher') return mockTeachers;
-    return mockClassrooms;
+    if (viewType === 'class') return classOptions;
+    if (viewType === 'teacher') return teacherOptions;
+    return classroomOptions;
   };
 
   // 获取选择器占位符
@@ -330,7 +317,7 @@ function ScheduleCalendar() {
         </div>
         <div style={styles.weekBody}>
           {timeSlots.map((time) => (
-            <>
+            <div key={`row-${time}`} style={{ display: 'contents' }}>
               <div key={`time-${time}`} style={styles.timeSlot}>
                 {time}
               </div>
@@ -371,7 +358,7 @@ function ScheduleCalendar() {
                   </div>
                 );
               })}
-            </>
+            </div>
           ))}
         </div>
       </div>
@@ -423,6 +410,9 @@ function ScheduleCalendar() {
             options={getSelectOptions()}
             value={selectedId}
             onChange={setSelectedId}
+            loading={optionsLoading}
+            showSearch
+            optionFilterProp="label"
             allowClear
           />
 

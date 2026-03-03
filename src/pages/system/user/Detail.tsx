@@ -1,5 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Card, Descriptions, Avatar, Tag, Space, Button, Tabs, Table, Timeline, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Card,
+  Descriptions,
+  Avatar,
+  Tag,
+  Space,
+  Button,
+  Tabs,
+  Table,
+  Timeline,
+  Spin,
+  message,
+} from 'antd';
 import {
   UserOutlined,
   PhoneOutlined,
@@ -13,42 +25,26 @@ import {
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { ColumnsType } from 'antd/es/table';
+import { getUserDetail, type User as ApiUser } from '@/api/user';
+import { getLoginLogList, type LoginLog as ApiLoginLog } from '@/api/system';
+import {
+  getOperationLogList,
+  type OperationLog as ApiOperationLog,
+} from '@/api/operationLog';
 
-interface UserDetail {
+interface UserDetailView {
   id: number;
   username: string;
   realName: string;
   avatar?: string;
   phone: string;
   email: string;
-  roles: Array<{ id: number; name: string; code: string }>;
+  roleIds: number[];
   status: 'active' | 'disabled';
   campus: string;
-  department: string;
-  position: string;
   createTime: string;
-  lastLoginTime: string;
-  lastLoginIp: string;
+  updateTime: string;
   remark?: string;
-}
-
-interface LoginLog {
-  id: number;
-  loginTime: string;
-  loginIp: string;
-  loginLocation: string;
-  browser: string;
-  os: string;
-  status: 'success' | 'failed';
-}
-
-interface OperationLog {
-  id: number;
-  operateTime: string;
-  module: string;
-  action: string;
-  description: string;
-  ip: string;
 }
 
 const styles = {
@@ -99,6 +95,7 @@ const styles = {
     gap: 24,
     color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 14,
+    flexWrap: 'wrap' as const,
   },
   metaItem: {
     display: 'flex',
@@ -129,112 +126,114 @@ const styles = {
   },
 };
 
-// 模拟数据
-const mockUserDetail: UserDetail = {
-  id: 1,
-  username: 'admin',
-  realName: '系统管理员',
-  phone: '13800138000',
-  email: 'admin@edu.com',
-  roles: [
-    { id: 1, name: '超级管理员', code: 'super_admin' },
-    { id: 2, name: '系统管理员', code: 'system_admin' },
-  ],
-  status: 'active',
-  campus: '总部校区',
-  department: '技术部',
-  position: '系统管理员',
-  createTime: '2024-01-01 10:00:00',
-  lastLoginTime: '2024-03-20 14:30:00',
-  lastLoginIp: '192.168.1.100',
-  remark: '系统超级管理员账号，拥有所有权限',
+const normalizeUserDetail = (response: unknown): ApiUser | null => {
+  if (!response) return null;
+
+  const raw = response as { data?: ApiUser } | ApiUser;
+  if ((raw as { data?: ApiUser }).data) {
+    return (raw as { data?: ApiUser }).data || null;
+  }
+
+  return raw as ApiUser;
 };
 
-const mockLoginLogs: LoginLog[] = [
-  {
-    id: 1,
-    loginTime: '2024-03-20 14:30:00',
-    loginIp: '192.168.1.100',
-    loginLocation: '广东省深圳市',
-    browser: 'Chrome 122',
-    os: 'Windows 10',
-    status: 'success',
-  },
-  {
-    id: 2,
-    loginTime: '2024-03-19 09:15:00',
-    loginIp: '192.168.1.100',
-    loginLocation: '广东省深圳市',
-    browser: 'Chrome 122',
-    os: 'Windows 10',
-    status: 'success',
-  },
-  {
-    id: 3,
-    loginTime: '2024-03-18 16:45:00',
-    loginIp: '192.168.1.101',
-    loginLocation: '广东省深圳市',
-    browser: 'Chrome 122',
-    os: 'Windows 10',
-    status: 'failed',
-  },
-];
+const normalizeLoginLogs = (response: unknown): ApiLoginLog[] => {
+  const raw = response as
+    | { list?: ApiLoginLog[]; data?: { list?: ApiLoginLog[] } }
+    | undefined;
 
-const mockOperationLogs: OperationLog[] = [
-  {
-    id: 1,
-    operateTime: '2024-03-20 15:30:00',
-    module: '用户管理',
-    action: '新增',
-    description: '新增用户：张三',
-    ip: '192.168.1.100',
-  },
-  {
-    id: 2,
-    operateTime: '2024-03-20 14:45:00',
-    module: '角色管理',
-    action: '编辑',
-    description: '修改角色：教师',
-    ip: '192.168.1.100',
-  },
-  {
-    id: 3,
-    operateTime: '2024-03-20 10:20:00',
-    module: '菜单管理',
-    action: '新增',
-    description: '新增菜单：学生管理',
-    ip: '192.168.1.100',
-  },
-];
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+
+  return [];
+};
+
+const normalizeOperationLogs = (response: unknown): ApiOperationLog[] => {
+  const raw = response as
+    | { list?: ApiOperationLog[]; data?: { list?: ApiOperationLog[] } }
+    | undefined;
+
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+
+  return [];
+};
+
+const mapUserToView = (user: ApiUser): UserDetailView => ({
+  id: user.id,
+  username: user.username,
+  realName: user.realName,
+  avatar: user.avatar,
+  phone: user.phone,
+  email: user.email,
+  roleIds: Array.isArray(user.roleIds) ? user.roleIds : [],
+  status: user.status === 1 ? 'active' : 'disabled',
+  campus: user.campusName || '-',
+  createTime: user.createTime,
+  updateTime: user.updateTime,
+  remark: user.remark,
+});
 
 export function Component() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [loading, setLoading] = useState(true);
-  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
-  const [loginLogs, setLoginLogs] = useState<LoginLog[]>([]);
-  const [operationLogs, setOperationLogs] = useState<OperationLog[]>([]);
-
-  useEffect(() => {
-    loadUserDetail();
-  }, [id]);
+  const [userDetail, setUserDetail] = useState<UserDetailView | null>(null);
+  const [loginLogs, setLoginLogs] = useState<ApiLoginLog[]>([]);
+  const [operationLogs, setOperationLogs] = useState<ApiOperationLog[]>([]);
 
   const loadUserDetail = async () => {
+    if (!id) {
+      setUserDetail(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      // 模拟API调用
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setUserDetail(mockUserDetail);
-      setLoginLogs(mockLoginLogs);
-      setOperationLogs(mockOperationLogs);
-    } catch (error) {
+      const userResponse = await getUserDetail(Number(id));
+      const user = normalizeUserDetail(userResponse);
+
+      if (!user) {
+        setUserDetail(null);
+        return;
+      }
+
+      const username = user.username;
+
+      const [loginResponse, operationResponse] = await Promise.all([
+        getLoginLogList({ page: 1, pageSize: 20, username }),
+        getOperationLogList({ page: 1, pageSize: 20, username }),
+      ]);
+
+      setUserDetail(mapUserToView(user));
+      setLoginLogs(normalizeLoginLogs(loginResponse));
+      setOperationLogs(normalizeOperationLogs(operationResponse));
+    } catch {
       message.error('加载用户详情失败');
+      setUserDetail(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const loginLogColumns: ColumnsType<LoginLog> = [
+  useEffect(() => {
+    void loadUserDetail();
+  }, [id]);
+
+  const lastLogin = useMemo(() => loginLogs[0] || null, [loginLogs]);
+
+  const loginLogColumns: ColumnsType<ApiLoginLog> = [
     {
       title: '登录时间',
       dataIndex: 'loginTime',
@@ -244,31 +243,31 @@ export function Component() {
     },
     {
       title: '登录IP',
-      dataIndex: 'loginIp',
-      key: 'loginIp',
+      dataIndex: 'ip',
+      key: 'ip',
       width: 150,
       render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text}</span>,
     },
     {
       title: '登录地点',
-      dataIndex: 'loginLocation',
-      key: 'loginLocation',
+      dataIndex: 'location',
+      key: 'location',
       width: 150,
-      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text}</span>,
+      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text || '-'}</span>,
     },
     {
       title: '浏览器',
       dataIndex: 'browser',
       key: 'browser',
       width: 120,
-      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text}</span>,
+      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text || '-'}</span>,
     },
     {
       title: '操作系统',
       dataIndex: 'os',
       key: 'os',
       width: 120,
-      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text}</span>,
+      render: (text) => <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{text || '-'}</span>,
     },
     {
       title: '状态',
@@ -316,33 +315,23 @@ export function Component() {
           用户详情
         </div>
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(-1)}
-            style={styles.backButton}
-          >
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={styles.backButton}>
             返回
           </Button>
           <Button
             type="primary"
             icon={<EditOutlined />}
             style={styles.editButton}
-            onClick={() => message.info('编辑功能开发中')}
+            onClick={() => message.info('请在用户管理列表页进行编辑')}
           >
             编辑
           </Button>
         </Space>
       </div>
 
-      {/* 用户基本信息 */}
       <Card style={styles.card}>
         <div style={styles.userHeader}>
-          <Avatar
-            size={100}
-            icon={<UserOutlined />}
-            src={userDetail.avatar}
-            style={styles.avatar}
-          />
+          <Avatar size={100} icon={<UserOutlined />} src={userDetail.avatar} style={styles.avatar} />
           <div style={styles.userInfo}>
             <div style={styles.userName}>{userDetail.realName}</div>
             <div style={styles.userMeta}>
@@ -352,11 +341,11 @@ export function Component() {
               </div>
               <div style={styles.metaItem}>
                 <PhoneOutlined />
-                <span>{userDetail.phone}</span>
+                <span>{userDetail.phone || '-'}</span>
               </div>
               <div style={styles.metaItem}>
                 <MailOutlined />
-                <span>{userDetail.email}</span>
+                <span>{userDetail.email || '-'}</span>
               </div>
               <div style={styles.metaItem}>
                 <EnvironmentOutlined />
@@ -380,37 +369,37 @@ export function Component() {
           <Descriptions.Item label="用户ID">{userDetail.id}</Descriptions.Item>
           <Descriptions.Item label="用户名">{userDetail.username}</Descriptions.Item>
           <Descriptions.Item label="真实姓名">{userDetail.realName}</Descriptions.Item>
-          <Descriptions.Item label="手机号">{userDetail.phone}</Descriptions.Item>
-          <Descriptions.Item label="邮箱">{userDetail.email}</Descriptions.Item>
+          <Descriptions.Item label="手机号">{userDetail.phone || '-'}</Descriptions.Item>
+          <Descriptions.Item label="邮箱">{userDetail.email || '-'}</Descriptions.Item>
           <Descriptions.Item label="所属校区">{userDetail.campus}</Descriptions.Item>
-          <Descriptions.Item label="部门">{userDetail.department}</Descriptions.Item>
-          <Descriptions.Item label="职位">{userDetail.position}</Descriptions.Item>
           <Descriptions.Item label="角色" span={2}>
             <Space wrap>
-              {userDetail.roles.map((role) => (
-                <Tag
-                  key={role.id}
-                  style={{
-                    background: 'rgba(0, 212, 255, 0.1)',
-                    border: '1px solid rgba(0, 212, 255, 0.3)',
-                    color: '#00d4ff',
-                  }}
-                >
-                  {role.name}
-                </Tag>
-              ))}
+              {userDetail.roleIds.length > 0 ? (
+                userDetail.roleIds.map((roleId) => (
+                  <Tag
+                    key={roleId}
+                    style={{
+                      background: 'rgba(0, 212, 255, 0.1)',
+                      border: '1px solid rgba(0, 212, 255, 0.3)',
+                      color: '#00d4ff',
+                    }}
+                  >
+                    角色#{roleId}
+                  </Tag>
+                ))
+              ) : (
+                <span style={{ color: 'rgba(255, 255, 255, 0.45)' }}>-</span>
+              )}
             </Space>
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">{userDetail.createTime}</Descriptions.Item>
-          <Descriptions.Item label="最后登录时间">{userDetail.lastLoginTime}</Descriptions.Item>
-          <Descriptions.Item label="最后登录IP" span={2}>{userDetail.lastLoginIp}</Descriptions.Item>
-          {userDetail.remark && (
-            <Descriptions.Item label="备注" span={2}>{userDetail.remark}</Descriptions.Item>
-          )}
+          <Descriptions.Item label="更新时间">{userDetail.updateTime}</Descriptions.Item>
+          <Descriptions.Item label="最后登录时间">{lastLogin?.loginTime || '-'}</Descriptions.Item>
+          <Descriptions.Item label="最后登录IP">{lastLogin?.ip || '-'}</Descriptions.Item>
+          {userDetail.remark && <Descriptions.Item label="备注" span={2}>{userDetail.remark}</Descriptions.Item>}
         </Descriptions>
       </Card>
 
-      {/* 详细信息标签页 */}
       <Card style={styles.card}>
         <Tabs
           defaultActiveKey="loginLog"
@@ -430,7 +419,7 @@ export function Component() {
                   rowKey="id"
                   pagination={{
                     pageSize: 10,
-                    showTotal: (total) => `共 ${total} 条记录`,
+                    showTotal: (value) => `共 ${value} 条记录`,
                   }}
                 />
               ),
@@ -449,13 +438,13 @@ export function Component() {
                     children: (
                       <div>
                         <div style={styles.timelineItem}>
-                          <strong>{log.module}</strong> - {log.action}
+                          <strong>{log.module}</strong> - {log.operation}
                         </div>
                         <div style={{ ...styles.timelineItem, marginTop: 4 }}>
-                          {log.description}
+                          {log.method}
                         </div>
                         <div style={{ ...styles.timelineTime, marginTop: 4 }}>
-                          {log.operateTime} · {log.ip}
+                          {log.createTime} · {log.ip}
                         </div>
                       </div>
                     ),

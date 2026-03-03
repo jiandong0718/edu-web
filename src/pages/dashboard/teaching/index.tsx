@@ -256,7 +256,7 @@ const TeachingDashboard = () => {
   useEffect(() => {
     getCampusList()
       .then((res) => {
-        setCampusList(res.data?.list || []);
+        setCampusList(res.list || []);
       })
       .catch(() => {
         // Campus list fetch failed silently

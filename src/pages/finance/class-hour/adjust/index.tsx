@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Card,
   Table,
@@ -35,104 +36,22 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { TablePaginationConfig } from 'antd/es/table';
+import {
+  getClassHourAccountList,
+  adjustClassHour,
+  getAccountAdjustRecords,
+  getClassHourStatistics,
+  exportClassHourAccountList,
+} from '@/api/classHour';
 import type {
   ClassHourAccount,
   ClassHourAdjustType,
   ClassHourAdjustRecord,
   ClassHourAdjustFormData,
+  ClassHourAccountQueryParams,
+  ClassHourStatistics,
 } from '@/types/classHour';
-
-// Mock data for demonstration
-const mockAccounts: ClassHourAccount[] = [
-  {
-    id: 1,
-    studentId: 1,
-    studentName: '张小明',
-    studentPhone: '13800138001',
-    courseId: 1,
-    courseName: '少儿编程入门班',
-    campusId: 1,
-    campusName: '总部校区',
-    totalHours: 48,
-    usedHours: 12,
-    remainingHours: 36,
-    frozenHours: 0,
-    giftHours: 8,
-    expireDate: '2025-06-30',
-    status: 'active',
-    createTime: '2024-01-15 10:30:00',
-    updateTime: '2024-01-20 14:20:00',
-  },
-  {
-    id: 2,
-    studentId: 2,
-    studentName: '李小红',
-    studentPhone: '13800138002',
-    courseId: 2,
-    courseName: '英语口语强化班',
-    campusId: 1,
-    campusName: '总部校区',
-    totalHours: 60,
-    usedHours: 55,
-    remainingHours: 5,
-    frozenHours: 0,
-    giftHours: 0,
-    expireDate: '2025-03-15',
-    status: 'warning',
-    createTime: '2024-02-01 09:00:00',
-    updateTime: '2024-02-10 16:45:00',
-  },
-  {
-    id: 3,
-    studentId: 3,
-    studentName: '王小刚',
-    studentPhone: '13800138003',
-    courseId: 3,
-    courseName: '钢琴基础班',
-    campusId: 2,
-    campusName: '分校区',
-    totalHours: 48,
-    usedHours: 48,
-    remainingHours: 0,
-    frozenHours: 0,
-    giftHours: 0,
-    expireDate: '2024-12-31',
-    status: 'expired',
-    createTime: '2023-12-01 11:20:00',
-    updateTime: '2024-12-31 23:59:59',
-  },
-];
-
-const mockAdjustRecords: ClassHourAdjustRecord[] = [
-  {
-    id: 1,
-    accountId: 1,
-    studentName: '张小明',
-    courseName: '少儿编程入门班',
-    adjustType: 'gift',
-    adjustHours: 8,
-    beforeHours: 40,
-    afterHours: 48,
-    reason: '学员表现优秀，赠送课时',
-    operatorId: 1,
-    operatorName: '管理员',
-    operateTime: '2024-01-20 14:20:00',
-  },
-  {
-    id: 2,
-    accountId: 2,
-    studentName: '李小红',
-    courseName: '英语口语强化班',
-    adjustType: 'deduct',
-    adjustHours: -5,
-    beforeHours: 10,
-    afterHours: 5,
-    reason: '学员请假扣除课时',
-    operatorId: 1,
-    operatorName: '管理员',
-    operateTime: '2024-02-10 16:45:00',
-  },
-];
 
 const styles = {
   pageHeader: {
@@ -161,14 +80,6 @@ const styles = {
     marginBottom: 20,
     flexWrap: 'wrap' as const,
   },
-  actionButton: {
-    background: 'linear-gradient(135deg, #00d4ff 0%, #0099ff 100%)',
-    border: 'none',
-    boxShadow: '0 4px 15px rgba(0, 212, 255, 0.3)',
-  },
-  statsBar: {
-    marginBottom: 24,
-  },
   statCard: {
     background: 'rgba(0, 212, 255, 0.05)',
     borderRadius: 10,
@@ -184,30 +95,276 @@ const statusConfig = {
   frozen: { color: '#ff4d6a', text: '已冻结', bg: 'rgba(255, 77, 106, 0.1)' },
 };
 
-const adjustTypeConfig = {
+const adjustTypeConfig: Record<
+  ClassHourAdjustType,
+  { color: string; text: string; icon: ReactNode }
+> = {
   gift: { color: '#00ff88', text: '赠送', icon: <GiftOutlined /> },
   deduct: { color: '#ff4d6a', text: '扣减', icon: <MinusCircleOutlined /> },
   revoke: { color: '#ffaa00', text: '撤销', icon: <RollbackOutlined /> },
 };
 
+const normalizeAccountPage = (response: unknown): { list: ClassHourAccount[]; total: number } => {
+  const raw = response as
+    | {
+        list?: ClassHourAccount[];
+        total?: number;
+        data?: { list?: ClassHourAccount[]; total?: number };
+      }
+    | undefined;
+
+  const payload = raw?.data && Array.isArray(raw.data.list) ? raw.data : raw;
+  const list = Array.isArray(payload?.list) ? payload.list : [];
+  const total = typeof payload?.total === 'number' ? payload.total : list.length;
+
+  return { list, total };
+};
+
+const normalizeAdjustRecords = (response: unknown): ClassHourAdjustRecord[] => {
+  if (Array.isArray(response)) {
+    return response as ClassHourAdjustRecord[];
+  }
+
+  const raw = response as
+    | { list?: ClassHourAdjustRecord[]; data?: ClassHourAdjustRecord[] | { list?: ClassHourAdjustRecord[] } }
+    | undefined;
+
+  if (Array.isArray(raw?.data)) {
+    return raw.data;
+  }
+
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+
+  if (raw?.data && Array.isArray((raw.data as { list?: ClassHourAdjustRecord[] }).list)) {
+    return (raw.data as { list?: ClassHourAdjustRecord[] }).list || [];
+  }
+
+  return [];
+};
+
+const normalizeStatistics = (response: unknown): ClassHourStatistics | null => {
+  const raw = response as { data?: ClassHourStatistics } | ClassHourStatistics | undefined;
+  if (!raw) return null;
+
+  if ((raw as { data?: ClassHourStatistics }).data) {
+    return (raw as { data?: ClassHourStatistics }).data || null;
+  }
+
+  return raw as ClassHourStatistics;
+};
+
 function ClassHourAdjust() {
-  const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<ClassHourAccount[]>(mockAccounts);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [accounts, setAccounts] = useState<ClassHourAccount[]>([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState<ClassHourStatistics | null>(null);
+
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
   const [recordModalVisible, setRecordModalVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<ClassHourAccount | null>(null);
   const [adjustRecords, setAdjustRecords] = useState<ClassHourAdjustRecord[]>([]);
+
+  const [studentNameInput, setStudentNameInput] = useState('');
+  const [studentPhoneInput, setStudentPhoneInput] = useState('');
+  const [campusFilter, setCampusFilter] = useState<number | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<ClassHourAccount['status'] | undefined>(undefined);
+
+  const [query, setQuery] = useState<ClassHourAccountQueryParams>({
+    page: 1,
+    pageSize: 10,
+  });
+
   const [form] = Form.useForm();
 
-  // Statistics
-  const statistics = {
-    totalAccounts: accounts.length,
-    activeAccounts: accounts.filter((a) => a.status === 'active').length,
-    warningAccounts: accounts.filter((a) => a.status === 'warning').length,
-    expiredAccounts: accounts.filter((a) => a.status === 'expired').length,
-    totalHours: accounts.reduce((sum, a) => sum + a.totalHours, 0),
-    remainingHours: accounts.reduce((sum, a) => sum + a.remainingHours, 0),
+  const loadStatistics = async () => {
+    try {
+      const response = await getClassHourStatistics();
+      const normalized = normalizeStatistics(response);
+      setStats(normalized);
+    } catch {
+      setStats(null);
+    }
   };
+
+  const loadData = async () => {
+    setTableLoading(true);
+    try {
+      const response = await getClassHourAccountList(query);
+      const pageResult = normalizeAccountPage(response);
+      setAccounts(pageResult.list);
+      setTotal(pageResult.total);
+    } catch {
+      message.error('加载课时账户失败');
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, [query]);
+
+  useEffect(() => {
+    void loadStatistics();
+  }, []);
+
+  const handleSearch = () => {
+    setQuery((prev) => ({
+      ...prev,
+      page: 1,
+      studentName: studentNameInput.trim() || undefined,
+      studentPhone: studentPhoneInput.trim() || undefined,
+      campusId: campusFilter,
+      status: statusFilter,
+    }));
+  };
+
+  const handleReset = () => {
+    setStudentNameInput('');
+    setStudentPhoneInput('');
+    setCampusFilter(undefined);
+    setStatusFilter(undefined);
+    setQuery({
+      page: 1,
+      pageSize: query.pageSize,
+    });
+  };
+
+  const handleRefresh = async () => {
+    await Promise.all([loadData(), loadStatistics()]);
+    message.success('数据已刷新');
+  };
+
+  const handleExport = async () => {
+    try {
+      await exportClassHourAccountList(query);
+      message.success('导出成功');
+    } catch {
+      message.error('导出失败');
+    }
+  };
+
+  const handleOpenAdjustModal = (account: ClassHourAccount) => {
+    setSelectedAccount(account);
+    setAdjustModalVisible(true);
+    form.resetFields();
+  };
+
+  const handleOpenRecordModal = async (account: ClassHourAccount) => {
+    setSelectedAccount(account);
+    setRecordModalVisible(true);
+
+    try {
+      const response = await getAccountAdjustRecords(account.id);
+      setAdjustRecords(normalizeAdjustRecords(response));
+    } catch {
+      message.error('加载调整记录失败');
+      setAdjustRecords([]);
+    }
+  };
+
+  const handleAdjustSubmit = async () => {
+    if (!selectedAccount) {
+      message.warning('请先选择账户');
+      return;
+    }
+
+    try {
+      const values = await form.validateFields();
+      setSubmitLoading(true);
+
+      const payload: ClassHourAdjustFormData = {
+        accountId: selectedAccount.id,
+        adjustType: values.adjustType,
+        adjustHours: values.adjustHours,
+        reason: values.reason,
+        remark: values.remark,
+      };
+
+      await adjustClassHour(payload);
+      message.success('课时调整成功');
+      setAdjustModalVisible(false);
+      form.resetFields();
+
+      await Promise.all([loadData(), loadStatistics()]);
+
+      if (recordModalVisible && selectedAccount) {
+        const records = await getAccountAdjustRecords(selectedAccount.id);
+        setAdjustRecords(normalizeAdjustRecords(records));
+      }
+    } catch {
+      // form validate or request failed
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const getWarningMessage = (account: ClassHourAccount | null) => {
+    if (!account) return null;
+
+    if (account.remainingHours <= 0) {
+      return (
+        <Alert
+          message="课时不足"
+          description="该学员课时已用完，无法继续上课"
+          type="error"
+          showIcon
+          icon={<ExclamationCircleOutlined />}
+          style={{ marginBottom: 16 }}
+        />
+      );
+    }
+
+    if (account.remainingHours <= 10) {
+      return (
+        <Alert
+          message="课时预警"
+          description={`该学员剩余课时不足，仅剩 ${account.remainingHours} 课时`}
+          type="warning"
+          showIcon
+          icon={<ExclamationCircleOutlined />}
+          style={{ marginBottom: 16 }}
+        />
+      );
+    }
+
+    const expireDate = new Date(account.expireDate);
+    const daysUntilExpire = Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysUntilExpire <= 30 && daysUntilExpire > 0) {
+      return (
+        <Alert
+          message="即将到期"
+          description={`该课时账户将在 ${daysUntilExpire} 天后到期`}
+          type="warning"
+          showIcon
+          icon={<ClockCircleOutlined />}
+          style={{ marginBottom: 16 }}
+        />
+      );
+    }
+
+    return null;
+  };
+
+  const statistics = useMemo(() => {
+    if (stats) {
+      return stats;
+    }
+
+    return {
+      totalAccounts: total,
+      activeAccounts: accounts.filter((item) => item.status === 'active').length,
+      warningAccounts: accounts.filter((item) => item.status === 'warning').length,
+      expiredAccounts: accounts.filter((item) => item.status === 'expired').length,
+      totalHours: accounts.reduce((sum, item) => sum + item.totalHours, 0),
+      usedHours: accounts.reduce((sum, item) => sum + item.usedHours, 0),
+      remainingHours: accounts.reduce((sum, item) => sum + item.remainingHours, 0),
+      giftHours: accounts.reduce((sum, item) => sum + item.giftHours, 0),
+    };
+  }, [accounts, stats, total]);
 
   const columns: ColumnsType<ClassHourAccount> = [
     {
@@ -220,6 +377,7 @@ function ClassHourAdjust() {
           <Avatar
             size={40}
             icon={<UserOutlined />}
+            src={record.studentAvatar}
             style={{
               background: 'linear-gradient(135deg, #00d4ff 0%, #0099ff 100%)',
             }}
@@ -317,7 +475,7 @@ function ClassHourAdjust() {
       key: 'status',
       width: 100,
       align: 'center',
-      render: (status: keyof typeof statusConfig) => {
+      render: (status: ClassHourAccount['status']) => {
         const config = statusConfig[status];
         return (
           <Tag
@@ -354,7 +512,7 @@ function ClassHourAdjust() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00ff88' }}
-              onClick={() => message.info(`查看账户详情: ${record.studentName}`)}
+              onClick={() => message.info(`账户ID: ${record.id}`)}
             />
           </Tooltip>
           <Tooltip title="调整记录">
@@ -362,97 +520,13 @@ function ClassHourAdjust() {
               type="text"
               icon={<HistoryOutlined />}
               style={{ color: '#ffaa00' }}
-              onClick={() => handleOpenRecordModal(record)}
+              onClick={() => void handleOpenRecordModal(record)}
             />
           </Tooltip>
         </Space>
       ),
     },
   ];
-
-  const handleOpenAdjustModal = (account: ClassHourAccount) => {
-    setSelectedAccount(account);
-    setAdjustModalVisible(true);
-    form.resetFields();
-  };
-
-  const handleOpenRecordModal = (account: ClassHourAccount) => {
-    setSelectedAccount(account);
-    setAdjustRecords(mockAdjustRecords.filter((r) => r.accountId === account.id));
-    setRecordModalVisible(true);
-  };
-
-  const handleAdjustSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setLoading(true);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      message.success('课时调整成功');
-      setAdjustModalVisible(false);
-      form.resetFields();
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      message.success('数据已刷新');
-    }, 1000);
-  };
-
-  const getWarningMessage = (account: ClassHourAccount | null) => {
-    if (!account) return null;
-
-    if (account.remainingHours <= 0) {
-      return (
-        <Alert
-          message="课时不足"
-          description="该学员课时已用完，无法继续上课"
-          type="error"
-          showIcon
-          icon={<ExclamationCircleOutlined />}
-          style={{ marginBottom: 16 }}
-        />
-      );
-    }
-
-    if (account.remainingHours <= 10) {
-      return (
-        <Alert
-          message="课时预警"
-          description={`该学员剩余课时不足，仅剩 ${account.remainingHours} 课时`}
-          type="warning"
-          showIcon
-          icon={<ExclamationCircleOutlined />}
-          style={{ marginBottom: 16 }}
-        />
-      );
-    }
-
-    const expireDate = new Date(account.expireDate);
-    const daysUntilExpire = Math.ceil((expireDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (daysUntilExpire <= 30 && daysUntilExpire > 0) {
-      return (
-        <Alert
-          message="即将到期"
-          description={`该课时账户将在 ${daysUntilExpire} 天后到期`}
-          type="warning"
-          showIcon
-          icon={<ClockCircleOutlined />}
-          style={{ marginBottom: 16 }}
-        />
-      );
-    }
-
-    return null;
-  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -462,19 +536,15 @@ function ClassHourAdjust() {
           课时调整管理
         </div>
         <Space>
-          <Button
-            icon={<DownloadOutlined />}
-            onClick={() => message.info('导出课时账户列表')}
-          >
+          <Button icon={<DownloadOutlined />} onClick={handleExport}>
             导出列表
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button icon={<ReloadOutlined />} onClick={() => void handleRefresh()}>
             刷新
           </Button>
         </Space>
       </div>
 
-      {/* Statistics */}
       <Card style={styles.card} bordered={false}>
         <Row gutter={16}>
           <Col span={6}>
@@ -518,23 +588,30 @@ function ClassHourAdjust() {
         </Row>
       </Card>
 
-      {/* Filter and Table */}
       <Card style={styles.card} bordered={false}>
         <div style={styles.filterBar}>
           <Input
             placeholder="搜索学员姓名"
             prefix={<SearchOutlined />}
             style={{ width: 200 }}
+            value={studentNameInput}
+            onChange={(e) => setStudentNameInput(e.target.value)}
+            onPressEnter={handleSearch}
           />
           <Input
             placeholder="搜索手机号"
             prefix={<SearchOutlined />}
             style={{ width: 180 }}
+            value={studentPhoneInput}
+            onChange={(e) => setStudentPhoneInput(e.target.value)}
+            onPressEnter={handleSearch}
           />
           <Select
             placeholder="选择校区"
             style={{ width: 150 }}
             allowClear
+            value={campusFilter}
+            onChange={setCampusFilter}
             options={[
               { label: '总部校区', value: 1 },
               { label: '分校区', value: 2 },
@@ -544,6 +621,8 @@ function ClassHourAdjust() {
             placeholder="选择状态"
             style={{ width: 120 }}
             allowClear
+            value={statusFilter}
+            onChange={setStatusFilter}
             options={[
               { label: '正常', value: 'active' },
               { label: '预警', value: 'warning' },
@@ -551,10 +630,10 @@ function ClassHourAdjust() {
               { label: '已冻结', value: 'frozen' },
             ]}
           />
-          <Button type="primary" icon={<SearchOutlined />}>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
             搜索
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+          <Button icon={<ReloadOutlined />} onClick={handleReset}>
             重置
           </Button>
         </div>
@@ -563,31 +642,35 @@ function ClassHourAdjust() {
           columns={columns}
           dataSource={accounts}
           rowKey="id"
-          loading={loading}
+          loading={tableLoading}
           scroll={{ x: 1400 }}
           pagination={{
-            total: accounts.length,
-            pageSize: 10,
+            current: query.page,
+            pageSize: query.pageSize,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showQuickJumper: true,
+            showTotal: (value) => `共 ${value} 条`,
+          }}
+          onChange={(pager: TablePaginationConfig) => {
+            setQuery((prev) => ({
+              ...prev,
+              page: pager.current || 1,
+              pageSize: pager.pageSize || 10,
+            }));
           }}
         />
       </Card>
 
-      {/* Adjust Modal */}
       <Modal
-        title={
-          <span style={{ color: '#00d4ff', fontSize: 18, fontWeight: 600 }}>
-            课时调整
-          </span>
-        }
+        title={<span style={{ color: '#00d4ff', fontSize: 18, fontWeight: 600 }}>课时调整</span>}
         open={adjustModalVisible}
-        onOk={handleAdjustSubmit}
+        onOk={() => void handleAdjustSubmit()}
         onCancel={() => {
           setAdjustModalVisible(false);
           form.resetFields();
         }}
-        confirmLoading={loading}
+        confirmLoading={submitLoading}
         width={600}
         styles={{
           body: { background: '#111827' },
@@ -609,41 +692,31 @@ function ClassHourAdjust() {
           >
             <Row gutter={16}>
               <Col span={12}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>
-                  学员姓名
-                </div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>学员姓名</div>
                 <div style={{ color: '#fff', fontWeight: 500, fontSize: 16 }}>
                   {selectedAccount.studentName}
                 </div>
               </Col>
               <Col span={12}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>
-                  课程名称
-                </div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>课程名称</div>
                 <div style={{ color: '#fff', fontWeight: 500, fontSize: 16 }}>
                   {selectedAccount.courseName}
                 </div>
               </Col>
               <Col span={8} style={{ marginTop: 12 }}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>
-                  总课时
-                </div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>总课时</div>
                 <div style={{ color: '#00d4ff', fontWeight: 600, fontSize: 18 }}>
                   {selectedAccount.totalHours}
                 </div>
               </Col>
               <Col span={8} style={{ marginTop: 12 }}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>
-                  已用课时
-                </div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>已用课时</div>
                 <div style={{ color: 'rgba(255, 255, 255, 0.85)', fontWeight: 600, fontSize: 18 }}>
                   {selectedAccount.usedHours}
                 </div>
               </Col>
               <Col span={8} style={{ marginTop: 12 }}>
-                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>
-                  剩余课时
-                </div>
+                <div style={{ color: 'rgba(255, 255, 255, 0.65)', marginBottom: 4 }}>剩余课时</div>
                 <div style={{ color: '#00ff88', fontWeight: 600, fontSize: 18 }}>
                   {selectedAccount.remainingHours}
                 </div>
@@ -713,35 +786,17 @@ function ClassHourAdjust() {
             label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>调整原因</span>}
             rules={[{ required: true, message: '请输入调整原因' }]}
           >
-            <Input.TextArea
-              placeholder="请输入调整原因"
-              rows={4}
-              maxLength={200}
-              showCount
-            />
+            <Input.TextArea placeholder="请输入调整原因" rows={4} maxLength={200} showCount />
           </Form.Item>
 
-          <Form.Item
-            name="remark"
-            label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>备注</span>}
-          >
-            <Input.TextArea
-              placeholder="请输入备注信息（可选）"
-              rows={3}
-              maxLength={200}
-              showCount
-            />
+          <Form.Item name="remark" label={<span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>备注</span>}>
+            <Input.TextArea placeholder="请输入备注信息（可选）" rows={3} maxLength={200} showCount />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* Record Modal */}
       <Modal
-        title={
-          <span style={{ color: '#00d4ff', fontSize: 18, fontWeight: 600 }}>
-            调整历史记录
-          </span>
-        }
+        title={<span style={{ color: '#00d4ff', fontSize: 18, fontWeight: 600 }}>调整历史记录</span>}
         open={recordModalVisible}
         onCancel={() => setRecordModalVisible(false)}
         footer={null}
@@ -764,15 +819,11 @@ function ClassHourAdjust() {
             <Space size="large">
               <div>
                 <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>学员: </span>
-                <span style={{ color: '#fff', fontWeight: 500 }}>
-                  {selectedAccount.studentName}
-                </span>
+                <span style={{ color: '#fff', fontWeight: 500 }}>{selectedAccount.studentName}</span>
               </div>
               <div>
                 <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>课程: </span>
-                <span style={{ color: '#fff', fontWeight: 500 }}>
-                  {selectedAccount.courseName}
-                </span>
+                <span style={{ color: '#fff', fontWeight: 500 }}>{selectedAccount.courseName}</span>
               </div>
             </Space>
           </div>

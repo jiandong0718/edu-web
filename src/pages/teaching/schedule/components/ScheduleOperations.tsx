@@ -36,6 +36,10 @@ import {
   cancelSchedule,
   checkConflict,
 } from '@/api/schedule';
+import { getTeacherList } from '@/api/teacher';
+import { getClassroomList } from '@/api/classroom';
+import type { Teacher } from '@/types/teacher';
+import type { Classroom } from '@/types/classroom';
 
 const { TextArea } = Input;
 
@@ -44,6 +48,7 @@ interface ScheduleOperationsProps {
 }
 
 type OperationType = 'reschedule' | 'substitute' | 'cancel';
+type Option = { label: string; value: number };
 
 // 样式定义
 const styles = {
@@ -75,97 +80,89 @@ const statusConfig = {
   rescheduled: { color: '#ffaa00', text: '已调课' },
 };
 
+const normalizeScheduleList = (response: unknown): Schedule[] => {
+  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
+const normalizeTeacherList = (response: unknown): Teacher[] => {
+  const raw = response as { list?: Teacher[]; data?: { list?: Teacher[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
+const normalizeClassroomList = (response: unknown): Classroom[] => {
+  const raw = response as { list?: Classroom[]; data?: { list?: Classroom[] } } | undefined;
+  if (Array.isArray(raw?.list)) {
+    return raw.list;
+  }
+  if (raw?.data && Array.isArray(raw.data.list)) {
+    return raw.data.list;
+  }
+  return [];
+};
+
 function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
   const [loading, setLoading] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [teacherOptions, setTeacherOptions] = useState<Option[]>([]);
+  const [classroomOptions, setClassroomOptions] = useState<Option[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [operationType, setOperationType] = useState<OperationType | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictInfo[]>([]);
   const [form] = Form.useForm();
 
-  // 模拟教师和教室数据
-  const mockTeachers = [
-    { label: '张老师', value: 1 },
-    { label: '李老师', value: 2 },
-    { label: '王老师', value: 3 },
-  ];
-
-  const mockClassrooms = [
-    { label: '101教室', value: 1 },
-    { label: '102教室', value: 2 },
-    { label: '201教室', value: 3 },
-  ];
-
-  // 模拟课表数据
-  const mockSchedules: Schedule[] = [
-    {
-      id: 1,
-      classId: 1,
-      className: '少儿编程初级班',
-      courseId: 1,
-      courseName: 'Scratch编程基础',
-      teacherId: 1,
-      teacherName: '张老师',
-      classroomId: 1,
-      classroomName: '101教室',
-      startTime: '2026-02-01 09:00:00',
-      endTime: '2026-02-01 10:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-    {
-      id: 2,
-      classId: 2,
-      className: '数学思维提升班',
-      courseId: 2,
-      courseName: '数学思维训练',
-      teacherId: 2,
-      teacherName: '李老师',
-      classroomId: 2,
-      classroomName: '102教室',
-      startTime: '2026-02-01 14:00:00',
-      endTime: '2026-02-01 15:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-    {
-      id: 3,
-      classId: 3,
-      className: '英语口语班',
-      courseId: 3,
-      courseName: '英语口语交流',
-      teacherId: 3,
-      teacherName: '王老师',
-      classroomId: 3,
-      classroomName: '201教室',
-      startTime: '2026-02-02 10:00:00',
-      endTime: '2026-02-02 11:30:00',
-      status: 'scheduled',
-      createdAt: '2026-01-31 10:00:00',
-      updatedAt: '2026-01-31 10:00:00',
-    },
-  ];
-
   useEffect(() => {
-    loadSchedules();
+    void loadSchedules();
+    void loadReferenceOptions();
   }, []);
+
+  const loadReferenceOptions = async () => {
+    try {
+      const [teachersResponse, classroomsResponse] = await Promise.all([
+        getTeacherList({ page: 1, pageSize: 200, status: 'active' }),
+        getClassroomList({ page: 1, pageSize: 200 }),
+      ]);
+
+      const teachers = normalizeTeacherList(teachersResponse);
+      const classrooms = normalizeClassroomList(classroomsResponse);
+
+      setTeacherOptions(
+        teachers.map((teacher) => ({ label: teacher.name, value: teacher.id }))
+      );
+      setClassroomOptions(
+        classrooms.map((classroom) => ({ label: classroom.name, value: classroom.id }))
+      );
+    } catch {
+      setTeacherOptions([]);
+      setClassroomOptions([]);
+    }
+  };
 
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      // 实际项目中调用 API
-      // const response = await getScheduleList({ status: 'scheduled' });
-      // setSchedules(response.list);
-
-      // 使用模拟数据
-      setTimeout(() => {
-        setSchedules(mockSchedules);
-        setLoading(false);
-      }, 500);
-    } catch (error) {
+      const response = await getScheduleList({
+        pageNum: 1,
+        pageSize: 200,
+        status: 'scheduled',
+      });
+      setSchedules(normalizeScheduleList(response));
+    } catch {
+      setSchedules([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -247,9 +244,9 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
       }
 
       setModalVisible(false);
-      loadSchedules();
+      await loadSchedules();
       onSuccess?.();
-    } catch (error) {
+    } catch {
       // Error handled by form validation UI
     }
   };
@@ -472,7 +469,7 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
                   <Form.Item label="新教师" name="newTeacherId">
                     <Select
                       placeholder="不修改则保持原教师"
-                      options={mockTeachers}
+                      options={teacherOptions}
                       allowClear
                     />
                   </Form.Item>
@@ -481,7 +478,7 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
                   <Form.Item label="新教室" name="newClassroomId">
                     <Select
                       placeholder="不修改则保持原教室"
-                      options={mockClassrooms}
+                      options={classroomOptions}
                       allowClear
                     />
                   </Form.Item>
@@ -509,7 +506,7 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
               name="substituteTeacherId"
               rules={[{ required: true, message: '请选择代课教师' }]}
             >
-              <Select placeholder="请选择代课教师" options={mockTeachers} />
+              <Select placeholder="请选择代课教师" options={teacherOptions} />
             </Form.Item>
           )}
 

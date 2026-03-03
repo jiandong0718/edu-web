@@ -31,11 +31,13 @@ import {
   ImportOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import { StudentBatchImport } from '@/components/StudentBatchImport';
 import { getStudentList, deleteStudent, createStudent, updateStudent, exportStudentList } from '@/api/student';
+import type { Student as ApiStudent, StudentFormData, StudentQueryParams } from '@/types/student';
 
 // 学生数据类型
-interface Student {
+interface StudentRow {
   id: number;
   name: string;
   avatar?: string;
@@ -49,6 +51,16 @@ interface Student {
   remainingHours: number;
   enrollDate: string;
   campus: string;
+}
+
+interface StudentFormValues {
+  name: string;
+  gender: 'male' | 'female';
+  age: number;
+  phone: string;
+  parentName: string;
+  parentPhone: string;
+  enrollDate: dayjs.Dayjs;
 }
 
 // 样式定义
@@ -123,14 +135,35 @@ const statusConfig = {
   suspended: { color: '#ffaa00', text: '休学', bg: 'rgba(255, 170, 0, 0.1)' },
 };
 
+const mapStatusToRow = (status: ApiStudent['status']): StudentRow['status'] => {
+  if (status === 'dropout') return 'suspended';
+  return status;
+};
+
+const mapApiStudentToRow = (student: ApiStudent): StudentRow => ({
+  id: student.id,
+  name: student.name,
+  avatar: student.avatar,
+  gender: student.gender,
+  age: student.birthday ? dayjs().diff(dayjs(student.birthday), 'year') : 0,
+  phone: student.phone,
+  parentName: student.parentName,
+  parentPhone: student.parentPhone,
+  status: mapStatusToRow(student.status),
+  courses: [],
+  remainingHours: 0,
+  enrollDate: student.enrollDate,
+  campus: student.campusName || '',
+});
+
 function StudentList() {
   const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentRow[]>([]);
   const [total, setTotal] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [campusFilter, setCampusFilter] = useState<string | undefined>(undefined);
@@ -140,13 +173,16 @@ function StudentList() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { ...pagination };
-      if (searchKeyword) params.keyword = searchKeyword;
-      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
-      if (campusFilter && campusFilter !== 'all') params.campus = campusFilter;
-      const res: any = await getStudentList(params);
-      setStudents(res?.list || res || []);
-      setTotal(res?.total || 0);
+      const params: StudentQueryParams = {
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+      };
+      if (searchKeyword) params.name = searchKeyword;
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter as StudentQueryParams['status'];
+      const res = await getStudentList(params);
+      const list = Array.isArray(res.list) ? res.list : [];
+      setStudents(list.map(mapApiStudentToRow));
+      setTotal(res.total || 0);
     } catch {
       // error handled by interceptor
     } finally {
@@ -159,7 +195,7 @@ function StudentList() {
   }, [loadData]);
 
   // 表格列定义
-  const columns: ColumnsType<Student> = [
+  const columns: ColumnsType<StudentRow> = [
     {
       title: '学生信息',
       key: 'info',
@@ -308,8 +344,12 @@ function StudentList() {
               icon={<EditOutlined />}
               style={{ color: '#00ff88' }}
               onClick={() => {
+                setEditingStudent(record);
+                form.setFieldsValue({
+                  ...record,
+                  enrollDate: record.enrollDate ? dayjs(record.enrollDate) : undefined,
+                });
                 setIsModalOpen(true);
-                form.setFieldsValue(record);
               }}
             />
           </Tooltip>
@@ -318,7 +358,7 @@ function StudentList() {
               type="text"
               icon={<DeleteOutlined />}
               style={{ color: '#ff4d6a' }}
-              onClick={() => message.info(`删除: ${record.name}`)}
+              onClick={() => handleDelete(record)}
             />
           </Tooltip>
         </Space>
@@ -330,7 +370,7 @@ function StudentList() {
     loadData();
   };
 
-  const handleDelete = async (record: Student) => {
+  const handleDelete = async (record: StudentRow) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除学生 ${record.name} 吗？`,
@@ -350,7 +390,13 @@ function StudentList() {
 
   const handleExport = async () => {
     try {
-      await exportStudentList({});
+      const params: StudentQueryParams = {
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+      };
+      if (searchKeyword) params.name = searchKeyword;
+      if (statusFilter && statusFilter !== 'all') params.status = statusFilter as StudentQueryParams['status'];
+      await exportStudentList(params);
       message.success('导出成功');
     } catch {
       message.error('导出失败');
@@ -360,6 +406,43 @@ function StudentList() {
   // 导入成功回调
   const handleImportSuccess = () => {
     loadData();
+  };
+
+  const handleSaveStudent = async () => {
+    try {
+      const values = (await form.validateFields()) as StudentFormValues;
+      const payload: StudentFormData = {
+        name: values.name,
+        gender: values.gender,
+        phone: values.phone,
+        parentName: values.parentName,
+        parentPhone: values.parentPhone,
+        birthday: dayjs().subtract(values.age, 'year').format('YYYY-MM-DD'),
+        address: '',
+        school: '',
+        grade: '',
+        status: 'active',
+        campusId: 1,
+        enrollDate: values.enrollDate.format('YYYY-MM-DD'),
+      };
+
+      if (editingStudent) {
+        await updateStudent(editingStudent.id, payload);
+        message.success('更新成功');
+      } else {
+        await createStudent(payload);
+        message.success('新增成功');
+      }
+      setIsModalOpen(false);
+      setEditingStudent(null);
+      form.resetFields();
+      loadData();
+    } catch (error) {
+      if ((error as { errorFields?: unknown }).errorFields) {
+        return;
+      }
+      message.error('保存失败');
+    }
   };
 
   return (
@@ -385,7 +468,11 @@ function StudentList() {
             type="primary"
             icon={<PlusOutlined />}
             style={styles.actionButton}
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setEditingStudent(null);
+              form.resetFields();
+              setIsModalOpen(true);
+            }}
           >
             新增学生
           </Button>
@@ -398,18 +485,18 @@ function StudentList() {
       <Card style={styles.card} bordered={false}>
         <div style={styles.statsBar}>
           <div style={styles.statItem}>
-            <div style={styles.statValue}>{mockStudents.length}</div>
+            <div style={styles.statValue}>{total}</div>
             <div style={styles.statLabel}>总学生数</div>
           </div>
           <div style={styles.statItem}>
             <div style={styles.statValue}>
-              {mockStudents.filter((s) => s.status === 'active').length}
+              {students.filter((s) => s.status === 'active').length}
             </div>
             <div style={styles.statLabel}>在读学生</div>
           </div>
           <div style={styles.statItem}>
             <div style={styles.statValue}>
-              {mockStudents.reduce((sum, s) => sum + s.remainingHours, 0)}
+              {students.reduce((sum, s) => sum + s.remainingHours, 0)}
             </div>
             <div style={styles.statLabel}>总剩余课时</div>
           </div>
@@ -420,10 +507,16 @@ function StudentList() {
             placeholder="搜索学生姓名、手机号"
             prefix={<SearchOutlined />}
             style={styles.searchInput}
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onPressEnter={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+            allowClear
           />
           <Select
             placeholder="状态"
             style={styles.select}
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value)}
             options={[
               { label: '全部', value: 'all' },
               { label: '在读', value: 'active' },
@@ -431,23 +524,32 @@ function StudentList() {
               { label: '结业', value: 'graduated' },
               { label: '休学', value: 'suspended' },
             ]}
+            allowClear
           />
           <Select
             placeholder="校区"
             style={styles.select}
+            value={campusFilter}
+            onChange={(value) => setCampusFilter(value)}
             options={[
               { label: '全部', value: 'all' },
               { label: '总部校区', value: '总部校区' },
               { label: '分部校区', value: '分部校区' },
             ]}
+            allowClear
           />
-          <Button icon={<FilterOutlined />}>高级筛选</Button>
-          <Button icon={<ExportOutlined />}>导出</Button>
+          <Button
+            icon={<FilterOutlined />}
+            onClick={() => setPagination((prev) => ({ ...prev, page: 1 }))}
+          >
+            应用筛选
+          </Button>
+          <Button icon={<ExportOutlined />} onClick={handleExport}>导出</Button>
         </div>
 
         <Table
           columns={columns}
-          dataSource={mockStudents}
+          dataSource={students}
           rowKey="id"
           loading={loading}
           rowSelection={{
@@ -455,24 +557,27 @@ function StudentList() {
             onChange: setSelectedRowKeys,
           }}
           pagination={{
-            total: mockStudents.length,
-            pageSize: 10,
+            current: pagination.page,
+            total,
+            pageSize: pagination.pageSize,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
+            onChange: (page, pageSize) => {
+              setPagination({ page, pageSize });
+            },
           }}
         />
       </Card>
 
       <Modal
-        title="新增学生"
+        title={editingStudent ? '编辑学生' : '新增学生'}
         open={isModalOpen}
-        onCancel={() => setIsModalOpen(false)}
-        onOk={() => {
-          form.validateFields().then(() => {
-            message.success('保存成功');
-            setIsModalOpen(false);
-          });
+        onCancel={() => {
+          setIsModalOpen(false);
+          setEditingStudent(null);
+          form.resetFields();
         }}
+        onOk={handleSaveStudent}
         width={800}
       >
         <Form form={form} layout="vertical">

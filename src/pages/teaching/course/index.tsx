@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Table,
@@ -20,83 +20,16 @@ import {
   ClockCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-
-interface Course {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  totalHours: number;
-  studentCount: number;
-  status: 'active' | 'inactive';
-  description: string;
-  createTime: string;
-}
-
-const mockCourses: Course[] = [
-  {
-    id: 1,
-    name: '少儿编程入门班',
-    category: '编程',
-    price: 3999,
-    totalHours: 48,
-    studentCount: 45,
-    status: 'active',
-    description: '适合6-12岁儿童的编程启蒙课程',
-    createTime: '2024-01-15',
-  },
-  {
-    id: 2,
-    name: '数学思维训练班',
-    category: '数学',
-    price: 2999,
-    totalHours: 36,
-    studentCount: 38,
-    status: 'active',
-    description: '培养逻辑思维和数学能力',
-    createTime: '2024-02-01',
-  },
-  {
-    id: 3,
-    name: '英语口语强化班',
-    category: '英语',
-    price: 4599,
-    totalHours: 60,
-    studentCount: 35,
-    status: 'active',
-    description: '外教一对一口语训练',
-    createTime: '2024-01-20',
-  },
-  {
-    id: 4,
-    name: '美术创意班',
-    category: '艺术',
-    price: 2599,
-    totalHours: 32,
-    studentCount: 32,
-    status: 'active',
-    description: '激发创意思维的美术课程',
-    createTime: '2024-03-01',
-  },
-  {
-    id: 5,
-    name: '钢琴基础班',
-    category: '音乐',
-    price: 5999,
-    totalHours: 48,
-    studentCount: 28,
-    status: 'inactive',
-    description: '零基础钢琴入门课程',
-    createTime: '2024-02-15',
-  },
-];
+import type { TablePaginationConfig } from 'antd/es/table';
+import { getCourseList } from '@/api/course';
+import type { Course, CourseQueryParams } from '@/types/course';
 
 const categoryColors: Record<string, string> = {
-  '编程': '#00d4ff',
-  '数学': '#00ff88',
-  '英语': '#ffaa00',
-  '艺术': '#ff6b9d',
-  '音乐': '#a855f7',
+  编程: '#00d4ff',
+  数学: '#00ff88',
+  英语: '#ffaa00',
+  艺术: '#ff6b9d',
+  音乐: '#a855f7',
 };
 
 const styles = {
@@ -154,8 +87,129 @@ const styles = {
   },
 };
 
+const toNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeStatus = (value: unknown): Course['status'] => {
+  if (value === 1 || value === '1' || value === 'active' || value === 'enabled') {
+    return 'active';
+  }
+  return 'inactive';
+};
+
+const normalizeCourse = (item: Record<string, unknown>): Course => {
+  const id = toNumber(item.id, 0);
+  const name = typeof item.name === 'string' ? item.name : `课程#${id}`;
+  const category =
+    typeof item.category === 'string'
+      ? item.category
+      : typeof item.categoryName === 'string'
+        ? item.categoryName
+        : '未分类';
+
+  return {
+    id,
+    name,
+    category,
+    price: toNumber(item.price),
+    totalHours: toNumber(item.totalHours ?? item.hours ?? item.classHours),
+    studentCount: toNumber(item.studentCount ?? item.currentStudents),
+    status: normalizeStatus(item.status),
+    description: typeof item.description === 'string' ? item.description : '',
+    createTime:
+      typeof item.createTime === 'string'
+        ? item.createTime
+        : typeof item.createdAt === 'string'
+          ? item.createdAt
+          : '-',
+  };
+};
+
+const normalizeCoursePage = (response: unknown): { list: Course[]; total: number } => {
+  const raw = response as
+    | {
+      list?: unknown[];
+      total?: number;
+      data?: { list?: unknown[]; total?: number } | unknown[];
+    }
+    | unknown[]
+    | undefined;
+
+  const payload =
+    raw && !Array.isArray(raw) && raw.data && !Array.isArray(raw.data) && Array.isArray(raw.data.list)
+      ? raw.data
+      : raw;
+
+  const rawList = Array.isArray(payload)
+    ? payload
+    : Array.isArray((payload as { list?: unknown[] } | undefined)?.list)
+      ? (payload as { list: unknown[] }).list
+      : raw && !Array.isArray(raw) && Array.isArray(raw.data)
+        ? raw.data
+        : [];
+
+  const list = rawList
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    .map(normalizeCourse);
+
+  const total =
+    !Array.isArray(payload) && typeof (payload as { total?: number } | undefined)?.total === 'number'
+      ? (payload as { total: number }).total
+      : list.length;
+
+  return { list, total };
+};
+
 function CourseList() {
   const [loading, setLoading] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [total, setTotal] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [queryKeyword, setQueryKeyword] = useState('');
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+  });
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const params: CourseQueryParams = {
+        page: pagination.current,
+        pageSize: pagination.pageSize,
+      };
+
+      if (queryKeyword) {
+        params.name = queryKeyword;
+      }
+
+      const response = await getCourseList(params);
+      const pageResult = normalizeCoursePage(response);
+      setCourses(pageResult.list);
+      setTotal(pageResult.total);
+    } catch {
+      message.error('加载课程列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, [pagination.current, pagination.pageSize, queryKeyword]);
+
+  const stats = useMemo(() => {
+    const totalStudents = courses.reduce((sum, c) => sum + c.studentCount, 0);
+    const activeCount = courses.filter((c) => c.status === 'active').length;
+
+    return {
+      totalCourses: total || courses.length,
+      activeCount,
+      totalStudents,
+    };
+  }, [courses, total]);
 
   const columns: ColumnsType<Course> = [
     {
@@ -168,7 +222,7 @@ function CourseList() {
             {record.name}
           </div>
           <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: 12 }}>
-            {record.description}
+            {record.description || '-'}
           </div>
         </div>
       ),
@@ -177,18 +231,22 @@ function CourseList() {
       title: '分类',
       dataIndex: 'category',
       key: 'category',
-      width: 100,
-      render: (category: string) => (
-        <Tag
-          style={{
-            background: `${categoryColors[category]}15`,
-            border: `1px solid ${categoryColors[category]}40`,
-            color: categoryColors[category],
-          }}
-        >
-          {category}
-        </Tag>
-      ),
+      width: 120,
+      render: (category: string | undefined) => {
+        const displayCategory = category || '未分类';
+        const color = categoryColors[displayCategory] || '#00d4ff';
+        return (
+          <Tag
+            style={{
+              background: `${color}15`,
+              border: `1px solid ${color}40`,
+              color,
+            }}
+          >
+            {displayCategory}
+          </Tag>
+        );
+      },
     },
     {
       title: '价格',
@@ -234,9 +292,7 @@ function CourseList() {
             showInfo={false}
             style={{ width: 60, marginBottom: 0 }}
           />
-          <span style={{ color: 'rgba(255, 255, 255, 0.85)', marginLeft: 8 }}>
-            {count}
-          </span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.85)', marginLeft: 8 }}>{count}</span>
         </div>
       ),
     },
@@ -246,7 +302,7 @@ function CourseList() {
       key: 'status',
       width: 100,
       align: 'center',
-      render: (status: string) => (
+      render: (status: Course['status']) => (
         <Tag
           style={{
             background: status === 'active' ? 'rgba(0, 255, 136, 0.1)' : 'rgba(255, 77, 106, 0.1)',
@@ -262,9 +318,9 @@ function CourseList() {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 120,
-      render: (date: string) => (
-        <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{date}</span>
+      width: 160,
+      render: (date: string | undefined) => (
+        <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{date || '-'}</span>
       ),
     },
     {
@@ -296,12 +352,20 @@ function CourseList() {
     },
   ];
 
+  const handleSearch = () => {
+    setPagination((prev) => ({ ...prev, current: 1 }));
+    setQueryKeyword(searchInput.trim());
+  };
+
   const handleRefresh = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      message.success('数据已刷新');
-    }, 1000);
+    void loadData();
+  };
+
+  const handleTableChange = (pager: TablePaginationConfig) => {
+    setPagination({
+      current: pager.current || 1,
+      pageSize: pager.pageSize || 10,
+    });
   };
 
   return (
@@ -316,6 +380,7 @@ function CourseList() {
             type="primary"
             icon={<PlusOutlined />}
             style={styles.actionButton}
+            onClick={() => message.info('请先在后端完成课程新增接口联调')}
           >
             新增课程
           </Button>
@@ -328,20 +393,16 @@ function CourseList() {
       <Card style={styles.card} bordered={false}>
         <div style={styles.statsBar}>
           <div style={styles.statItem}>
-            <div style={styles.statValue}>{mockCourses.length}</div>
+            <div style={styles.statValue}>{stats.totalCourses}</div>
             <div style={styles.statLabel}>总课程数</div>
           </div>
           <div style={styles.statItem}>
-            <div style={styles.statValue}>
-              {mockCourses.filter((c) => c.status === 'active').length}
-            </div>
-            <div style={styles.statLabel}>启用课程</div>
+            <div style={styles.statValue}>{stats.activeCount}</div>
+            <div style={styles.statLabel}>当前页启用课程</div>
           </div>
           <div style={styles.statItem}>
-            <div style={styles.statValue}>
-              {mockCourses.reduce((sum, c) => sum + c.studentCount, 0)}
-            </div>
-            <div style={styles.statLabel}>总学员数</div>
+            <div style={styles.statValue}>{stats.totalStudents}</div>
+            <div style={styles.statLabel}>当前页总学员数</div>
           </div>
         </div>
 
@@ -349,8 +410,15 @@ function CourseList() {
           <Input
             placeholder="搜索课程名称"
             prefix={<SearchOutlined />}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onPressEnter={handleSearch}
+            allowClear
             style={{ width: 280 }}
           />
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+            搜索
+          </Button>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
             刷新
           </Button>
@@ -358,14 +426,16 @@ function CourseList() {
 
         <Table
           columns={columns}
-          dataSource={mockCourses}
+          dataSource={courses}
           rowKey="id"
           loading={loading}
+          onChange={handleTableChange}
           pagination={{
-            total: mockCourses.length,
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total,
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (count) => `共 ${count} 条`,
           }}
         />
       </Card>

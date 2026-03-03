@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   Button,
@@ -27,132 +27,18 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
+import type { Dayjs } from 'dayjs';
 import { CommonTable } from '@/components/CommonTable';
 import {
+  getLoginLogList,
+  deleteLoginLog,
+  batchDeleteLoginLog,
   exportLoginLog,
   type LoginLog,
   type LoginLogQueryParams,
 } from '@/api/system';
-import { Dayjs } from 'dayjs';
 
 const { RangePicker } = DatePicker;
-
-// 模拟登录日志数据（用于开发测试）
-const mockLogs: LoginLog[] = [
-  {
-    id: 1,
-    username: 'admin',
-    realName: '管理员',
-    ip: '192.168.1.100',
-    location: '广东深圳',
-    browser: 'Chrome 120',
-    os: 'Windows 10',
-    status: 'success',
-    loginTime: '2024-01-30 10:30:25',
-  },
-  {
-    id: 2,
-    username: 'teacher01',
-    realName: '张老师',
-    ip: '192.168.1.105',
-    location: '广东深圳',
-    browser: 'Firefox 121',
-    os: 'macOS 14',
-    status: 'success',
-    loginTime: '2024-01-30 10:25:18',
-  },
-  {
-    id: 3,
-    username: 'student01',
-    realName: '李同学',
-    ip: '192.168.1.120',
-    location: '广东广州',
-    browser: 'Safari 17',
-    os: 'iOS 17',
-    status: 'failure',
-    message: '密码错误',
-    loginTime: '2024-01-30 10:20:45',
-  },
-  {
-    id: 4,
-    username: 'teacher02',
-    realName: '王老师',
-    ip: '192.168.1.108',
-    location: '广东深圳',
-    browser: 'Edge 120',
-    os: 'Windows 11',
-    status: 'success',
-    loginTime: '2024-01-30 10:15:32',
-  },
-  {
-    id: 5,
-    username: 'admin',
-    realName: '管理员',
-    ip: '192.168.1.100',
-    location: '广东深圳',
-    browser: 'Chrome 120',
-    os: 'Windows 10',
-    status: 'success',
-    loginTime: '2024-01-30 10:10:15',
-  },
-  {
-    id: 6,
-    username: 'student02',
-    realName: '赵同学',
-    ip: '192.168.1.125',
-    location: '广东东莞',
-    browser: 'Chrome 120',
-    os: 'Android 14',
-    status: 'failure',
-    message: '账号已被锁定',
-    loginTime: '2024-01-30 10:05:50',
-  },
-  {
-    id: 7,
-    username: 'teacher01',
-    realName: '张老师',
-    ip: '192.168.1.105',
-    location: '广东深圳',
-    browser: 'Firefox 121',
-    os: 'macOS 14',
-    status: 'success',
-    loginTime: '2024-01-30 10:00:28',
-  },
-  {
-    id: 8,
-    username: 'admin',
-    realName: '管理员',
-    ip: '192.168.1.100',
-    location: '广东深圳',
-    browser: 'Chrome 120',
-    os: 'Windows 10',
-    status: 'success',
-    loginTime: '2024-01-30 09:55:42',
-  },
-  {
-    id: 9,
-    username: 'student03',
-    realName: '孙同学',
-    ip: '192.168.1.130',
-    location: '广东佛山',
-    browser: 'Chrome 120',
-    os: 'Windows 10',
-    status: 'failure',
-    message: '验证码错误',
-    loginTime: '2024-01-30 09:50:15',
-  },
-  {
-    id: 10,
-    username: 'teacher03',
-    realName: '周老师',
-    ip: '192.168.1.110',
-    location: '广东深圳',
-    browser: 'Chrome 120',
-    os: 'macOS 14',
-    status: 'success',
-    loginTime: '2024-01-30 09:45:30',
-  },
-];
 
 const styles = {
   pageHeader: {
@@ -203,22 +89,30 @@ const styles = {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
   },
-  chartCard: {
-    background: 'linear-gradient(135deg, #111827 0%, #1a2332 100%)',
-    border: '1px solid rgba(0, 212, 255, 0.1)',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: 600,
-    color: '#fff',
-    marginBottom: 16,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
+};
+
+const initialQueryParams: LoginLogQueryParams = {
+  page: 1,
+  pageSize: 10,
+  username: '',
+  ip: '',
+  status: '',
+  startTime: '',
+  endTime: '',
+};
+
+const isIpKeyword = (keyword: string) => /^\d{1,3}(?:\.\d{1,3}){1,3}$/.test(keyword);
+
+const normalizeLoginLogPage = (response: unknown): { list: LoginLog[]; total: number } => {
+  const raw = response as
+    | { list?: LoginLog[]; total?: number; data?: { list?: LoginLog[]; total?: number } }
+    | undefined;
+
+  const payload = raw?.data && Array.isArray(raw.data.list) ? raw.data : raw;
+  const list = Array.isArray(payload?.list) ? payload.list : [];
+  const total = typeof payload?.total === 'number' ? payload.total : list.length;
+
+  return { list, total };
 };
 
 export default function Component() {
@@ -227,67 +121,29 @@ export default function Component() {
   const [total, setTotal] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
 
-  // 查询参数
-  const [queryParams, setQueryParams] = useState<LoginLogQueryParams>({
-    page: 1,
-    pageSize: 10,
-    username: '',
-    ip: '',
-    status: '',
-    startTime: '',
-    endTime: '',
-  });
+  const [queryParams, setQueryParams] = useState<LoginLogQueryParams>(initialQueryParams);
 
-  // 筛选表单值
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
-  // 加载数据
-  useEffect(() => {
-    loadData();
-  }, [queryParams]);
-
   const loadData = async () => {
     setLoading(true);
     try {
-      // 实际项目中调用API
-      // const response = await getLoginLogList(queryParams);
-      // setLogs(response.list);
-      // setTotal(response.total);
-
-      // 开发阶段使用模拟数据
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // 模拟筛选
-      let filteredLogs = [...mockLogs];
-
-      if (queryParams.username) {
-        filteredLogs = filteredLogs.filter(
-          (log) =>
-            log.username.includes(queryParams.username || '') ||
-            log.realName.includes(queryParams.username || '')
-        );
-      }
-
-      if (queryParams.ip) {
-        filteredLogs = filteredLogs.filter((log) =>
-          log.ip.includes(queryParams.ip || '')
-        );
-      }
-
-      if (queryParams.status) {
-        filteredLogs = filteredLogs.filter((log) => log.status === queryParams.status);
-      }
-
-      setLogs(filteredLogs);
-      setTotal(filteredLogs.length);
-    } catch (error) {
+      const response = await getLoginLogList(queryParams);
+      const pageResult = normalizeLoginLogPage(response);
+      setLogs(pageResult.list);
+      setTotal(pageResult.total);
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    void loadData();
+  }, [queryParams]);
 
   const columns: ColumnsType<LoginLog> = [
     {
@@ -324,7 +180,7 @@ export default function Component() {
       key: 'browser',
       width: 120,
       render: (browser: string) => (
-        <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{browser}</span>
+        <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{browser || '-'}</span>
       ),
     },
     {
@@ -333,7 +189,7 @@ export default function Component() {
       key: 'os',
       width: 120,
       render: (os: string) => (
-        <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{os}</span>
+        <span style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{os || '-'}</span>
       ),
     },
     {
@@ -386,40 +242,32 @@ export default function Component() {
   ];
 
   const handleRefresh = () => {
-    loadData();
+    void loadData();
   };
 
-  // 搜索
   const handleSearch = () => {
-    setQueryParams({
-      ...queryParams,
+    const keyword = searchKeyword.trim();
+    const isIp = keyword !== '' && isIpKeyword(keyword);
+
+    setQueryParams((prev) => ({
+      ...prev,
       page: 1,
-      username: searchKeyword,
-      ip: searchKeyword,
+      username: isIp ? '' : keyword,
+      ip: isIp ? keyword : '',
       status: statusFilter as 'success' | 'failure' | '',
       startTime: dateRange ? dateRange[0].format('YYYY-MM-DD HH:mm:ss') : '',
       endTime: dateRange ? dateRange[1].format('YYYY-MM-DD HH:mm:ss') : '',
-    });
+    }));
   };
 
-  // 重置筛选
   const handleReset = () => {
     setSearchKeyword('');
     setStatusFilter('');
     setDateRange(null);
-    setQueryParams({
-      page: 1,
-      pageSize: 10,
-      username: '',
-      ip: '',
-      status: '',
-      startTime: '',
-      endTime: '',
-    });
+    setQueryParams(initialQueryParams);
   };
 
-  // 删除单条日志
-  const handleDelete = async (_id: number) => {
+  const handleDelete = (id: number) => {
     Modal.confirm({
       title: '确认删除',
       icon: <ExclamationCircleOutlined />,
@@ -428,17 +276,17 @@ export default function Component() {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // await deleteLoginLog(id);
+          await deleteLoginLog(id);
           message.success('删除成功');
-          loadData();
-        } catch (error) {
+          setSelectedRowKeys((prev) => prev.filter((key) => key !== id));
+          await loadData();
+        } catch {
           message.error('删除失败');
         }
       },
     });
   };
 
-  // 批量删除
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       message.warning('请先选择要删除的日志');
@@ -453,43 +301,44 @@ export default function Component() {
       cancelText: '取消',
       onOk: async () => {
         try {
-          // await batchDeleteLoginLog(selectedRowKeys);
+          await batchDeleteLoginLog(selectedRowKeys);
           message.success(`已删除 ${selectedRowKeys.length} 条日志`);
           setSelectedRowKeys([]);
-          loadData();
-        } catch (error) {
+          await loadData();
+        } catch {
           message.error('删除失败');
         }
       },
     });
   };
 
-  // 导出
   const handleExport = async () => {
     try {
       await exportLoginLog(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
-  // 分页变化
   const handleTableChange = (
     pagination: TablePaginationConfig,
     _filters: Record<string, FilterValue | null>,
     _sorter: SorterResult<LoginLog> | SorterResult<LoginLog>[]
   ) => {
-    setQueryParams({
-      ...queryParams,
+    setQueryParams((prev) => ({
+      ...prev,
       page: pagination.current || 1,
       pageSize: pagination.pageSize || 10,
-    });
+    }));
   };
 
-  const successCount = logs.filter((l) => l.status === 'success').length;
-  const failureCount = logs.filter((l) => l.status === 'failure').length;
-  const successRate = logs.length > 0 ? ((successCount / logs.length) * 100).toFixed(1) : '0.0';
+  const { successCount, failureCount, successRate } = useMemo(() => {
+    const success = logs.filter((item) => item.status === 'success').length;
+    const failure = logs.filter((item) => item.status === 'failure').length;
+    const rate = logs.length > 0 ? ((success / logs.length) * 100).toFixed(1) : '0.0';
+    return { successCount: success, failureCount: failure, successRate: rate };
+  }, [logs]);
 
   return (
     <div style={{ padding: 24 }}>
@@ -517,7 +366,7 @@ export default function Component() {
         <Row gutter={16} style={{ marginBottom: 20 }}>
           <Col span={6}>
             <div style={styles.statCard}>
-              <div style={styles.statValue}>{logs.length}</div>
+              <div style={styles.statValue}>{total}</div>
               <div style={styles.statLabel}>总登录次数</div>
             </div>
           </Col>
@@ -538,7 +387,7 @@ export default function Component() {
               <div style={styles.statValue}>{successRate}%</div>
               <div style={styles.statLabel}>成功率</div>
               <Progress
-                percent={parseFloat(successRate)}
+                percent={Number(successRate)}
                 strokeColor="#00ff88"
                 trailColor="rgba(255, 255, 255, 0.1)"
                 showInfo={false}
@@ -561,7 +410,7 @@ export default function Component() {
             placeholder="登录状态"
             style={{ width: 120 }}
             value={statusFilter || undefined}
-            onChange={setStatusFilter}
+            onChange={(value) => setStatusFilter(value || '')}
             allowClear
             options={[
               { label: '全部', value: '' },
@@ -573,7 +422,13 @@ export default function Component() {
             showTime
             format="YYYY-MM-DD HH:mm:ss"
             value={dateRange}
-            onChange={(dates) => setDateRange(dates as [Dayjs, Dayjs] | null)}
+            onChange={(dates) => {
+              if (dates && dates[0] && dates[1]) {
+                setDateRange([dates[0], dates[1]]);
+                return;
+              }
+              setDateRange(null);
+            }}
             placeholder={['开始时间', '结束时间']}
           />
           <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
@@ -581,11 +436,7 @@ export default function Component() {
           </Button>
           <Button onClick={handleReset}>重置</Button>
           {selectedRowKeys.length > 0 && (
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={handleBatchDelete}
-            >
+            <Button danger icon={<DeleteOutlined />} onClick={handleBatchDelete}>
               批量删除 ({selectedRowKeys.length})
             </Button>
           )}
@@ -599,10 +450,10 @@ export default function Component() {
           pagination={{
             current: queryParams.page,
             pageSize: queryParams.pageSize,
-            total: total,
+            total,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showTotal: (value) => `共 ${value} 条记录`,
             pageSizeOptions: ['10', '20', '50', '100'],
           }}
           rowSelection={{

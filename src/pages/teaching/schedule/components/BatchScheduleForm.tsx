@@ -32,6 +32,12 @@ import type {
   SchedulePreviewItem,
 } from '@/types/schedule';
 import { batchScheduleEnhanced } from '@/api/schedule';
+import { getClassList } from '@/api/class';
+import { getTeacherList } from '@/api/teacher';
+import { getClassroomList } from '@/api/classroom';
+import type { Class } from '@/types/class';
+import type { Teacher } from '@/types/teacher';
+import type { Classroom } from '@/types/classroom';
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
@@ -39,6 +45,7 @@ const { TextArea } = Input;
 interface BatchScheduleFormProps {
   onSuccess?: () => void;
 }
+type Option = { label: string; value: number };
 
 // 样式定义
 const styles = {
@@ -71,36 +78,17 @@ const styles = {
 function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [classList, setClassList] = useState<Class[]>([]);
+  const [classOptions, setClassOptions] = useState<Option[]>([]);
+  const [courseOptions, setCourseOptions] = useState<Option[]>([]);
+  const [teacherOptions, setTeacherOptions] = useState<Option[]>([]);
+  const [classroomOptions, setClassroomOptions] = useState<Option[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([
     { startTime: '09:00', endTime: '10:30' },
   ]);
   const [previewData, setPreviewData] = useState<SchedulePreviewItem[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-
-  // 模拟数据
-  const mockClasses = [
-    { label: '少儿编程初级班', value: 1 },
-    { label: '数学思维提升班', value: 2 },
-    { label: '英语口语班', value: 3 },
-  ];
-
-  const mockCourses = [
-    { label: 'Scratch编程基础', value: 1 },
-    { label: '数学思维训练', value: 2 },
-    { label: '英语口语交流', value: 3 },
-  ];
-
-  const mockTeachers = [
-    { label: '张老师', value: 1 },
-    { label: '李老师', value: 2 },
-    { label: '王老师', value: 3 },
-  ];
-
-  const mockClassrooms = [
-    { label: '101教室', value: 1 },
-    { label: '102教室', value: 2 },
-    { label: '201教室', value: 3 },
-  ];
 
   const repeatTypeOptions = [
     { label: '不重复', value: 'none' },
@@ -118,6 +106,81 @@ function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
     { label: '周六', value: 6 },
     { label: '周日', value: 7 },
   ];
+
+  const normalizeClassList = (response: unknown): Class[] => {
+    const raw = response as { list?: Class[]; data?: { list?: Class[] } } | undefined;
+    if (Array.isArray(raw?.list)) {
+      return raw.list;
+    }
+    if (raw?.data && Array.isArray(raw.data.list)) {
+      return raw.data.list;
+    }
+    return [];
+  };
+
+  const normalizeTeacherList = (response: unknown): Teacher[] => {
+    const raw = response as { list?: Teacher[]; data?: { list?: Teacher[] } } | undefined;
+    if (Array.isArray(raw?.list)) {
+      return raw.list;
+    }
+    if (raw?.data && Array.isArray(raw.data.list)) {
+      return raw.data.list;
+    }
+    return [];
+  };
+
+  const normalizeClassroomList = (response: unknown): Classroom[] => {
+    const raw = response as { list?: Classroom[]; data?: { list?: Classroom[] } } | undefined;
+    if (Array.isArray(raw?.list)) {
+      return raw.list;
+    }
+    if (raw?.data && Array.isArray(raw.data.list)) {
+      return raw.data.list;
+    }
+    return [];
+  };
+
+  const loadOptions = async () => {
+    setOptionsLoading(true);
+    try {
+      const [classesResponse, teachersResponse, classroomsResponse] = await Promise.all([
+        getClassList({ page: 1, pageSize: 500 }),
+        getTeacherList({ page: 1, pageSize: 500, status: 'active' }),
+        getClassroomList({ page: 1, pageSize: 500 }),
+      ]);
+
+      const classes = normalizeClassList(classesResponse);
+      const teachers = normalizeTeacherList(teachersResponse);
+      const classrooms = normalizeClassroomList(classroomsResponse);
+
+      setClassList(classes);
+      setClassOptions(classes.map((item) => ({ label: item.name, value: item.id })));
+      setTeacherOptions(teachers.map((item) => ({ label: item.name, value: item.id })));
+      setClassroomOptions(classrooms.map((item) => ({ label: item.name, value: item.id })));
+
+      const courseMap = new Map<number, string>();
+      classes.forEach((item) => {
+        if (item.courseId && item.courseName) {
+          courseMap.set(item.courseId, item.courseName);
+        }
+      });
+      setCourseOptions(
+        Array.from(courseMap.entries()).map(([value, label]) => ({ value, label }))
+      );
+    } catch {
+      setClassList([]);
+      setClassOptions([]);
+      setCourseOptions([]);
+      setTeacherOptions([]);
+      setClassroomOptions([]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadOptions();
+  }, []);
 
   // 添加时间段
   const handleAddTimeSlot = () => {
@@ -307,7 +370,14 @@ function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
               >
                 <Select
                   placeholder="请选择班级"
-                  options={mockClasses}
+                  options={classOptions}
+                  loading={optionsLoading}
+                  onChange={(value) => {
+                    const selectedClass = classList.find((item) => item.id === value);
+                    if (selectedClass?.courseId) {
+                      form.setFieldValue('courseId', selectedClass.courseId);
+                    }
+                  }}
                   showSearch
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -323,7 +393,8 @@ function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
               >
                 <Select
                   placeholder="请选择课程"
-                  options={mockCourses}
+                  options={courseOptions}
+                  loading={optionsLoading}
                   showSearch
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -342,7 +413,8 @@ function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
               >
                 <Select
                   placeholder="请选择教师"
-                  options={mockTeachers}
+                  options={teacherOptions}
+                  loading={optionsLoading}
                   showSearch
                   filterOption={(input, option) =>
                     (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -354,7 +426,8 @@ function BatchScheduleForm({ onSuccess }: BatchScheduleFormProps) {
               <Form.Item label="选择教室" name="classroomId">
                 <Select
                   placeholder="请选择教室（可选）"
-                  options={mockClassrooms}
+                  options={classroomOptions}
+                  loading={optionsLoading}
                   allowClear
                   showSearch
                   filterOption={(input, option) =>
