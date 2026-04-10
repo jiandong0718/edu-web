@@ -26,6 +26,7 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { TablePaginationConfig } from 'antd/es/table';
 import { CommonTable } from '@/components/CommonTable';
 import type {
   Classroom,
@@ -43,6 +44,20 @@ import {
   getClassroomStatistics,
   exportClassroomList,
 } from '@/api/classroom';
+import { getCampusList } from '@/api/campus';
+
+const normalizePageResult = <T,>(
+  payload: { list?: T[]; total?: number } | { data?: { list?: T[]; total?: number } } | null | undefined
+) => {
+  const result = (
+    payload && typeof payload === 'object' && 'data' in payload && payload.data
+      ? payload.data
+      : payload
+  ) as { list?: T[]; total?: number } | null | undefined;
+  const list = Array.isArray(result?.list) ? result.list : [];
+  const total = typeof result?.total === 'number' ? result.total : list.length;
+  return { list, total };
+};
 
 // 设施选项
 const FACILITY_OPTIONS = [
@@ -61,12 +76,6 @@ const STATUS_OPTIONS = [
   { label: '空闲', value: 'available' },
   { label: '使用中', value: 'occupied' },
   { label: '维护中', value: 'maintenance' },
-];
-
-// 校区选项（实际应该从接口获取）
-const CAMPUS_OPTIONS = [
-  { label: '总部校区', value: 1 },
-  { label: '分部校区', value: 2 },
 ];
 
 const styles = {
@@ -144,15 +153,28 @@ export default function ClassroomManagement() {
     pageSize: 10,
   });
   const [total, setTotal] = useState(0);
+  const [campusOptions, setCampusOptions] = useState<{ label: string; value: number }[]>([]);
+
+  // 获取校区列表
+  useEffect(() => {
+    getCampusList().then((res) => {
+      setCampusOptions(
+        (res.list || []).map((c) => ({ label: c.name, value: c.id }))
+      );
+    }).catch(() => {
+      message.error('加载校区列表失败');
+    });
+  }, []);
 
   // 获取教室列表
   const fetchClassrooms = async () => {
     setLoading(true);
     try {
       const response = await getClassroomList(queryParams);
-      setClassrooms(response.data.list);
-      setTotal(response.data.total);
-    } catch (error) {
+      const pageResult = normalizePageResult<Classroom>(response);
+      setClassrooms(pageResult.list);
+      setTotal(pageResult.total);
+    } catch {
       message.error('获取教室列表失败');
     } finally {
       setLoading(false);
@@ -164,8 +186,8 @@ export default function ClassroomManagement() {
     try {
       const data = await getClassroomStatistics();
       setStatistics(data);
-    } catch (error) {
-      // Statistics fetch failed silently
+    } catch {
+      message.error('加载统计数据失败');
     }
   };
 
@@ -361,7 +383,10 @@ export default function ClassroomManagement() {
   };
 
   // 处理筛选
-  const handleFilter = (key: string, value: any) => {
+  const handleFilter = (
+    key: keyof ClassroomQueryParams,
+    value: ClassroomQueryParams[keyof ClassroomQueryParams]
+  ) => {
     setQueryParams({ ...queryParams, [key]: value, page: 1 });
   };
 
@@ -389,7 +414,7 @@ export default function ClassroomManagement() {
       message.success('删除成功');
       fetchClassrooms();
       fetchStatistics();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -412,15 +437,19 @@ export default function ClassroomManagement() {
       okText: '确定',
       cancelText: '取消',
       onOk: async () => {
-        const form = document.getElementById('statusForm') as any;
-        const formData = new FormData(form);
+        const statusForm = document.getElementById('statusForm');
+        if (!(statusForm instanceof HTMLFormElement)) {
+          message.error('状态表单未就绪');
+          return;
+        }
+        const formData = new FormData(statusForm);
         const status = formData.get('status') as ClassroomStatus;
         try {
           await updateClassroomStatus(record.id, status);
           message.success('状态更新成功');
           fetchClassrooms();
           fetchStatistics();
-        } catch (error) {
+        } catch {
           message.error('状态更新失败');
         }
       },
@@ -447,7 +476,7 @@ export default function ClassroomManagement() {
       setModalVisible(false);
       fetchClassrooms();
       fetchStatistics();
-    } catch (error) {
+    } catch {
       // Error handled by form validation UI
     }
   };
@@ -463,13 +492,13 @@ export default function ClassroomManagement() {
     try {
       await exportClassroomList(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
   // 处理分页变化
-  const handleTableChange = (pagination: any) => {
+  const handleTableChange = (pagination: TablePaginationConfig) => {
     setQueryParams({
       ...queryParams,
       page: pagination.current,
@@ -556,7 +585,7 @@ export default function ClassroomManagement() {
             placeholder="选择校区"
             style={{ width: 160 }}
             allowClear
-            options={[{ label: '全部校区', value: undefined }, ...CAMPUS_OPTIONS]}
+            options={[{ label: '全部校区', value: undefined }, ...campusOptions]}
             onChange={(value) => handleFilter('campusId', value)}
           />
           <Select
@@ -650,7 +679,7 @@ export default function ClassroomManagement() {
                   name="campusId"
                   rules={[{ required: true, message: '请选择所属校区' }]}
                 >
-                  <Select placeholder="请选择所属校区" options={CAMPUS_OPTIONS} />
+                  <Select placeholder="请选择所属校区" options={campusOptions} />
                 </Form.Item>
               </Col>
               <Col span={12}>

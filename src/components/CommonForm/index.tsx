@@ -14,7 +14,7 @@ export interface CommonFormProps extends FormProps {
   // 是否显示取消按钮
   showCancel?: boolean;
   // 提交处理函数
-  onSubmit?: (values: any) => Promise<void> | void;
+  onSubmit?: (values: unknown) => Promise<void> | void;
   // 取消处理函数
   onCancel?: () => void;
   // 是否显示操作按钮
@@ -78,8 +78,8 @@ export function CommonForm({
         try {
           await onSubmit(values);
           message.success('提交成功');
-        } catch (error: any) {
-          message.error(error.message || '提交失败');
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '提交失败');
         } finally {
           setLoading(false);
         }

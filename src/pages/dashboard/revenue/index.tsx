@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, DatePicker, Select, Table, Spin } from 'antd';
+import { Card, Row, Col, Statistic, DatePicker, Select, Table, Spin, message } from 'antd';
 import { Column, Pie, Line } from '@ant-design/plots';
 import {
   DollarOutlined,
@@ -27,6 +27,13 @@ import './index.css';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
+
+const unwrapPayload = <T,>(payload: T | { data?: T } | null | undefined): T | undefined => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T | undefined;
+  }
+  return (payload ?? undefined) as T | undefined;
+};
 
 const RevenueDashboard = () => {
   const [loading, setLoading] = useState(false);
@@ -64,13 +71,13 @@ const RevenueDashboard = () => {
         }),
       ]);
 
-      setOverview(overviewRes.data);
-      setRevenueTrend(trendRes.data || []);
-      setPaymentMethods(paymentRes.data || []);
-      setArrearsList(arrearsRes.data || []);
-      setCourseRevenue(courseRes.data || []);
-    } catch (error) {
-      // Revenue data fetch failed silently
+      setOverview(unwrapPayload<RevenueOverview>(overviewRes) ?? null);
+      setRevenueTrend(unwrapPayload<RevenueTrendItem[]>(trendRes) ?? []);
+      setPaymentMethods(unwrapPayload<PaymentMethodItem[]>(paymentRes) ?? []);
+      setArrearsList(unwrapPayload<ArrearsItem[]>(arrearsRes) ?? []);
+      setCourseRevenue(unwrapPayload<CourseRevenueItem[]>(courseRes) ?? []);
+    } catch {
+      message.error('加载营收数据失败');
     } finally {
       setLoading(false);
     }

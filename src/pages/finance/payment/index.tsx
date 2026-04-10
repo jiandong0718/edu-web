@@ -2,8 +2,26 @@ import React, { useState } from 'react';
 import { Card, Table, Button, Space, Tag, message, Modal } from 'antd';
 import { PrinterOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { getPaymentPage, downloadBatchReceiptPdf, type Payment } from '@/api/payment';
+import {
+  getPaymentPage,
+  downloadBatchReceiptPdf,
+  type Payment,
+  type PaymentPageResult,
+} from '@/api/payment';
 import ReceiptPrint from '@/components/ReceiptPrint';
+
+const normalizePaymentPage = (
+  response: PaymentPageResult | { data?: PaymentPageResult }
+): { records: Payment[]; total: number } => {
+  const payload = (('data' in response ? response.data : response) ?? {}) as PaymentPageResult;
+  const records = Array.isArray(payload.records)
+    ? payload.records
+    : Array.isArray(payload.list)
+      ? payload.list
+      : [];
+  const total = typeof payload.total === 'number' ? payload.total : records.length;
+  return { records, total };
+};
 
 const PaymentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -23,9 +41,10 @@ const PaymentPage: React.FC = () => {
         pageNum,
         pageSize,
       });
-      setDataSource(response.data.records);
-      setTotal(response.data.total);
-    } catch (error) {
+      const pageResult = normalizePaymentPage(response);
+      setDataSource(pageResult.records);
+      setTotal(pageResult.total);
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -67,7 +86,7 @@ const PaymentPage: React.FC = () => {
           window.URL.revokeObjectURL(url);
 
           message.success('批量下载成功');
-        } catch (error) {
+        } catch {
           message.error('批量下载失败');
         }
       },
@@ -151,7 +170,7 @@ const PaymentPage: React.FC = () => {
       key: 'action',
       width: 150,
       fixed: 'right',
-      render: (_: any, record: Payment) => (
+      render: (_value, record: Payment) => (
         <Space size="small">
           <Button
             type="link"

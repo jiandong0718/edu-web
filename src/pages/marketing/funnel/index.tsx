@@ -22,7 +22,9 @@ import {
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { getFunnelStats } from '@/api/marketing';
+import { getCampusList } from '@/api/campus';
 import type { FunnelStatsResponse, FunnelQueryParams } from '@/types/marketing';
+import type { Campus } from '@/components/CampusSwitch';
 
 const { RangePicker } = DatePicker;
 
@@ -186,6 +188,7 @@ const FunnelChart = ({ data }: { data: FunnelStatsResponse | null }) => {
 function FunnelPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FunnelStatsResponse | null>(null);
+  const [campusOptions, setCampusOptions] = useState<Campus[]>([]);
   const [queryParams, setQueryParams] = useState<FunnelQueryParams>({
     startDate: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     endDate: dayjs().format('YYYY-MM-DD'),
@@ -197,8 +200,8 @@ function FunnelPage() {
     try {
       const res = await getFunnelStats(queryParams);
       setData(res);
-    } catch (error: any) {
-      message.error(error.message || '加载失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -207,6 +210,10 @@ function FunnelPage() {
   useEffect(() => {
     loadData();
   }, [queryParams]);
+
+  useEffect(() => {
+    getCampusList().then(res => setCampusOptions(res.list)).catch(() => message.error('加载校区列表失败'));
+  }, []);
 
   // 处理日期范围变化
   const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
@@ -277,9 +284,9 @@ function FunnelPage() {
               value={queryParams.campusId}
               onChange={handleCampusChange}
             >
-              <Select.Option value={1}>总部校区</Select.Option>
-              <Select.Option value={2}>分校区A</Select.Option>
-              <Select.Option value={3}>分校区B</Select.Option>
+              {campusOptions.map(c => (
+                <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+              ))}
             </Select>
           </Space>
         </div>

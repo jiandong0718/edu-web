@@ -27,7 +27,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { TablePaginationConfig } from 'antd/es/table';
-import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { Dayjs } from 'dayjs';
 import { CommonTable } from '@/components/CommonTable';
 import {
@@ -149,6 +148,8 @@ export default function Component() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
+  type OperationModulesResponse = string[] | { data?: string[] };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -171,7 +172,8 @@ export default function Component() {
     const loadModules = async () => {
       try {
         const res = await getOperationModules();
-        const list = Array.isArray(res) ? res : Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const raw = res as OperationModulesResponse;
+        const list = Array.isArray(raw) ? raw : Array.isArray(raw.data) ? raw.data : [];
         setModules(list);
       } catch {
         setModules([]);
@@ -276,11 +278,7 @@ export default function Component() {
     }
   };
 
-  const handleTableChange = (
-    pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    _sorter: SorterResult<OperationLog> | SorterResult<OperationLog>[]
-  ) => {
+  const handleTableChange = (pagination: TablePaginationConfig) => {
     setQueryParams((prev) => ({
       ...prev,
       page: pagination.current || 1,

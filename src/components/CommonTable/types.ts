@@ -14,11 +14,11 @@ export interface PaginationConfig extends TablePaginationConfig {
 /**
  * 请求参数
  */
-export interface FetchParams {
+export interface FetchParams<T extends object = Record<string, unknown>> {
   current: number;
   pageSize: number;
   filters?: Record<string, FilterValue | null>;
-  sorter?: SorterResult<any> | SorterResult<any>[];
+  sorter?: SorterResult<T> | SorterResult<T>[];
   search?: string;
 }
 
@@ -53,7 +53,7 @@ export interface ExportConfig {
 /**
  * CommonTable组件Props
  */
-export interface CommonTableProps<T extends Record<string, any>> extends Omit<TableProps<T>, 'onChange' | 'rowSelection'> {
+export interface CommonTableProps<T extends object> extends Omit<TableProps<T>, 'onChange' | 'rowSelection'> {
   // 列定义
   columns: ColumnType<T>[];
 
@@ -67,7 +67,7 @@ export interface CommonTableProps<T extends Record<string, any>> extends Omit<Ta
   pagination?: PaginationConfig | false;
 
   // 数据获取函数（动态数据）
-  onFetch?: (params: FetchParams) => Promise<PageResult<T>>;
+  onFetch?: (params: FetchParams<T>) => Promise<PageResult<T>>;
 
   // 行key
   rowKey?: string | ((record: T) => string);

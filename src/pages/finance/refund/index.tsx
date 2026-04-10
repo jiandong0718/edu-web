@@ -12,7 +12,6 @@ import {
   Form,
   Select,
   DatePicker,
-  InputNumber,
   Descriptions,
   Spin,
   Row,
@@ -161,7 +160,7 @@ function RefundList() {
         approvedCount,
         totalAmount,
       });
-    } catch (error) {
+    } catch {
       message.error('获取退费申请列表失败');
     } finally {
       setLoading(false);
@@ -176,7 +175,7 @@ function RefundList() {
         status: 'active',
       });
       setContracts(response.list);
-    } catch (error) {
+    } catch {
       message.error('获取合同列表失败');
     }
   };
@@ -187,7 +186,7 @@ function RefundList() {
     try {
       const result = await calculateRefundAmount(contractId);
       setCalculation(result);
-    } catch (error) {
+    } catch {
       message.error('计算退费金额失败');
     } finally {
       setCalculationLoading(false);
@@ -213,8 +212,8 @@ function RefundList() {
       message.success('退费申请提交成功');
       setApplyModalVisible(false);
       fetchRefundList();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error instanceof Object && 'errorFields' in error) {
         message.error('请填写完整的表单信息');
       } else {
         message.error('提交退费申请失败');
@@ -227,12 +226,12 @@ function RefundList() {
       const detail = await getRefundDetail(record.id);
       setSelectedRefund(detail);
       setDetailModalVisible(true);
-    } catch (error) {
+    } catch {
       message.error('获取退费详情失败');
     }
   };
 
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: Partial<RefundQueryParams>) => {
     setQueryParams({
       ...queryParams,
       pageNum: 1,

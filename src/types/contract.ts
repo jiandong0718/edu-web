@@ -24,6 +24,7 @@ export interface Contract {
   paidAmount: number;
   refundAmount: number;
   discountAmount: number;
+  totalHours?: number;
   signDate: string;
   startDate: string;
   endDate: string;
@@ -75,7 +76,7 @@ export interface HourAccount {
   totalHours: number; // 总课时
   usedHours: number; // 已用课时
   remainingHours: number; // 剩余课时
-  frozenHours: number; // 冻结课时
+  giftHours: number; // 赠送课时
   expireDate: string;
   status: 'active' | 'expired' | 'frozen';
 }
@@ -151,13 +152,6 @@ export interface PaymentFormData {
 }
 
 // 退费申请参数
-export interface RefundFormData {
-  contractId: number;
-  refundAmount: number;
-  refundReason: string;
-  refundDate: string;
-}
-
 // 合同审批记录
 export interface ContractApproval {
   id: number;

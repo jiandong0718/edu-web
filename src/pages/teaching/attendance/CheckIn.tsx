@@ -26,7 +26,6 @@ import type { ColumnsType } from 'antd/es/table';
 import { getClassCourseInfo, checkIn, batchCheckIn } from '@/api/attendance';
 import { getClassList } from '@/api/class';
 import { getScheduleList } from '@/api/schedule';
-import type { Class } from '@/types/class';
 import type { Schedule } from '@/types/schedule';
 import type {
   StudentCheckInInfo,
@@ -123,34 +122,6 @@ interface Option {
   label: string;
 }
 
-const normalizeClassList = (response: unknown): Class[] => {
-  const raw = response as { list?: Class[]; data?: { list?: Class[] } } | undefined;
-
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-
-  return [];
-};
-
-const normalizeScheduleList = (response: unknown): Schedule[] => {
-  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
-
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-
-  return [];
-};
-
 function formatScheduleLabel(schedule: Schedule): string {
   const start = schedule.startTime || '';
   const end = schedule.endTime || '';
@@ -179,7 +150,7 @@ function CheckInPage() {
     setOptionLoading(true);
     try {
       const response = await getClassList({ page: 1, pageSize: 200 });
-      const classes = normalizeClassList(response);
+      const classes = response.list;
       setClassOptions(
         classes.map((item) => ({
           value: item.id,
@@ -197,12 +168,11 @@ function CheckInPage() {
     setOptionLoading(true);
     try {
       const response = await getScheduleList({
-        pageNum: 1,
-        pageSize: 200,
         classId: selectedClassId,
+        status: 'scheduled',
       });
 
-      const schedules = normalizeScheduleList(response);
+      const schedules = response.list;
       setScheduleOptions(
         schedules.map((item) => ({
           value: item.id,

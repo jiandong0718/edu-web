@@ -62,7 +62,8 @@ import {
   batchConfigAvailableTime,
 } from '@/api/teacher';
 import { FileUpload } from '@/components/FileUpload';
-import { http } from '@/utils/request';
+import { getCampusList } from '@/api/campus';
+import type { Campus } from '@/components/CampusSwitch';
 import dayjs from 'dayjs';
 
 const { TabPane } = Tabs;
@@ -158,7 +159,7 @@ export function Component() {
   const [availableTimeForm] = Form.useForm();
   const [certFileUrl, setCertFileUrl] = useState<string>();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-  const [campusList, setCampusList] = useState<{ id: number; name: string }[]>([]);
+  const [campusList, setCampusList] = useState<Campus[]>([]);
 
   // 加载教师详情
   const loadTeacherDetail = async () => {
@@ -166,7 +167,7 @@ export function Component() {
     try {
       const data = await getTeacherDetail(teacherId);
       setTeacher(data);
-    } catch (error) {
+    } catch {
       message.error('加载教师信息失败');
     } finally {
       setLoading(false);
@@ -178,7 +179,7 @@ export function Component() {
     try {
       const data = await getTeacherCertificates(teacherId);
       setCertificates(data);
-    } catch (error) {
+    } catch {
       message.error('加载证书列表失败');
     }
   };
@@ -188,7 +189,7 @@ export function Component() {
     try {
       const data = await getTeacherSchedules(teacherId);
       setSchedules(data);
-    } catch (error) {
+    } catch {
       message.error('加载排班列表失败');
     }
   };
@@ -205,14 +206,10 @@ export function Component() {
   // 加载校区列表
   const loadCampusList = async () => {
     try {
-      const data = await http.get<{ id: number; name: string }[]>('/system/campus/list');
-      setCampusList(data);
-    } catch (error) {
-      // 使用默认校区数据作为兜底
-      setCampusList([
-        { id: 1, name: '总部校区' },
-        { id: 2, name: '分部校区' },
-      ]);
+      const data = await getCampusList();
+      setCampusList(data.list);
+    } catch {
+      message.error('加载校区列表失败');
     }
   };
 
@@ -221,7 +218,7 @@ export function Component() {
     try {
       const data = await getTeacherSalaryConfigs(teacherId);
       setSalaryConfigs(data);
-    } catch (error) {
+    } catch {
       message.error('加载课酬配置失败');
     }
   };
@@ -231,7 +228,7 @@ export function Component() {
     try {
       const data = await getTeacherScheduleEvents(teacherId);
       setScheduleEvents(data);
-    } catch (error) {
+    } catch {
       message.error('加载排班事件失败');
     }
   };
@@ -267,7 +264,7 @@ export function Component() {
       await deleteCertificate(certId);
       message.success('删除成功');
       loadCertificates();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -293,8 +290,8 @@ export function Component() {
       }
       setCertModalVisible(false);
       loadCertificates();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -322,7 +319,7 @@ export function Component() {
       await deleteSchedule(scheduleId);
       message.success('删除成功');
       loadSchedules();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -347,8 +344,8 @@ export function Component() {
       }
       setScheduleModalVisible(false);
       loadSchedules();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -375,7 +372,7 @@ export function Component() {
       await deleteSalaryConfig(salaryId);
       message.success('删除成功');
       loadSalaryConfigs();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -399,8 +396,8 @@ export function Component() {
       }
       setSalaryModalVisible(false);
       loadSalaryConfigs();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -433,8 +430,8 @@ export function Component() {
       message.success('配置成功');
       setAvailableTimeModalVisible(false);
       loadSchedules();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -651,12 +648,12 @@ export function Component() {
       align: 'center',
       render: (_, record) => (
         <Space>
-          <Tooltip title="查看历史">
+          <Tooltip title="查看历史（功能暂未开放）">
             <Button
               type="text"
               icon={<HistoryOutlined />}
-              style={{ color: '#00d4ff' }}
-              onClick={() => message.info('查看历史功能开发中')}
+              style={{ color: 'rgba(255, 255, 255, 0.25)' }}
+              disabled
             />
           </Tooltip>
           <Tooltip title="编辑">

@@ -57,7 +57,7 @@ const BatchPrintModal: React.FC<BatchPrintModalProps> = ({
       if (defaultTemplate) {
         setSelectedTemplateId(defaultTemplate.id);
       }
-    } catch (error) {
+    } catch {
       message.error('加载打印模板失败');
     }
   };
@@ -98,7 +98,7 @@ const BatchPrintModal: React.FC<BatchPrintModalProps> = ({
       message.success(`批量打印完成，成功 ${successCount}/${contracts.length} 个合同`);
 
       onSuccess?.();
-    } catch (error) {
+    } catch {
       message.error('批量打印失败');
       // 标记所有为失败
       const failedResults = printResults.map((result) => ({

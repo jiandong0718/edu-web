@@ -20,6 +20,8 @@ import {
   Col,
   Statistic,
   Badge,
+  Descriptions,
+  Spin,
 } from 'antd';
 import {
   SearchOutlined,
@@ -39,6 +41,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { TablePaginationConfig } from 'antd/es/table';
 import {
   getClassHourAccountList,
+  getClassHourAccountDetail,
   adjustClassHour,
   getAccountAdjustRecords,
   getClassHourStatistics,
@@ -52,6 +55,8 @@ import type {
   ClassHourAccountQueryParams,
   ClassHourStatistics,
 } from '@/types/classHour';
+import { getCampusList } from '@/api/campus';
+import type { Campus } from '@/components/CampusSwitch';
 
 const styles = {
   pageHeader: {
@@ -167,6 +172,14 @@ function ClassHourAdjust() {
   const [selectedAccount, setSelectedAccount] = useState<ClassHourAccount | null>(null);
   const [adjustRecords, setAdjustRecords] = useState<ClassHourAdjustRecord[]>([]);
 
+  // 详情弹窗
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailData, setDetailData] = useState<ClassHourAccount | null>(null);
+
+  // 动态校区列表
+  const [campusOptions, setCampusOptions] = useState<Campus[]>([]);
+
   const [studentNameInput, setStudentNameInput] = useState('');
   const [studentPhoneInput, setStudentPhoneInput] = useState('');
   const [campusFilter, setCampusFilter] = useState<number | undefined>(undefined);
@@ -210,6 +223,23 @@ function ClassHourAdjust() {
   useEffect(() => {
     void loadStatistics();
   }, []);
+
+  useEffect(() => {
+    getCampusList().then(res => setCampusOptions(res.list)).catch(() => message.error('加载校区列表失败'));
+  }, []);
+
+  const handleViewDetail = async (account: ClassHourAccount) => {
+    setDetailVisible(true);
+    setDetailLoading(true);
+    try {
+      const data = await getClassHourAccountDetail(account.id);
+      setDetailData(data as ClassHourAccount);
+    } catch {
+      message.error('加载账户详情失败');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const handleSearch = () => {
     setQuery((prev) => ({
@@ -512,7 +542,7 @@ function ClassHourAdjust() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00ff88' }}
-              onClick={() => message.info(`账户ID: ${record.id}`)}
+              onClick={() => void handleViewDetail(record)}
             />
           </Tooltip>
           <Tooltip title="调整记录">
@@ -612,10 +642,7 @@ function ClassHourAdjust() {
             allowClear
             value={campusFilter}
             onChange={setCampusFilter}
-            options={[
-              { label: '总部校区', value: 1 },
-              { label: '分校区', value: 2 },
-            ]}
+            options={campusOptions.map((c) => ({ label: c.name, value: c.id }))}
           />
           <Select
             placeholder="选择状态"
@@ -887,6 +914,41 @@ function ClassHourAdjust() {
             暂无调整记录
           </div>
         )}
+      </Modal>
+
+      {/* 账户详情弹窗 */}
+      <Modal
+        title="课时账户详情"
+        open={detailVisible}
+        onCancel={() => setDetailVisible(false)}
+        footer={null}
+        width={650}
+      >
+        {detailLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : detailData ? (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="学员姓名">{detailData.studentName}</Descriptions.Item>
+            <Descriptions.Item label="手机号">{detailData.studentPhone}</Descriptions.Item>
+            <Descriptions.Item label="课程名称">{detailData.courseName}</Descriptions.Item>
+            <Descriptions.Item label="校区">{detailData.campusName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="总课时">{detailData.totalHours}</Descriptions.Item>
+            <Descriptions.Item label="已用课时">{detailData.usedHours}</Descriptions.Item>
+            <Descriptions.Item label="剩余课时">
+              <span style={{ color: detailData.remainingHours > 10 ? '#00ff88' : detailData.remainingHours > 0 ? '#ffaa00' : '#ff4d6a', fontWeight: 600 }}>
+                {detailData.remainingHours}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="赠送课时">{detailData.giftHours}</Descriptions.Item>
+            <Descriptions.Item label="到期日期">{detailData.expireDate}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={detailData.status === 'active' ? 'green' : detailData.status === 'warning' ? 'orange' : 'red'}>
+                {statusConfig[detailData.status]?.text || detailData.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间" span={2}>{detailData.createTime || '-'}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
       </Modal>
     </div>
   );

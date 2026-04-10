@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import {
   Card,
   Select,
@@ -195,7 +195,7 @@ function AttendanceStatisticsPage() {
       setClassStats(data.classStat);
       setStudentStats(data.studentStats);
       setSummary(data.summary);
-    } catch (error) {
+    } catch {
       message.error('加载统计数据失败');
     } finally {
       setLoading(false);
@@ -391,7 +391,7 @@ function AttendanceStatisticsPage() {
     try {
       await exportAttendanceStats(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
@@ -401,6 +401,12 @@ function AttendanceStatisticsPage() {
   const presentDeg = total > 0 ? (summary.presentCount / total) * 360 : 0;
   const absentDeg = total > 0 ? presentDeg + (summary.absentCount / total) * 360 : 0;
   const lateDeg = total > 0 ? absentDeg + (summary.lateCount / total) * 360 : 0;
+  const pieChartStyle: CSSProperties & Record<'--present-deg' | '--absent-deg' | '--late-deg', string> = {
+    ...styles.pieChart,
+    '--present-deg': `${presentDeg}deg`,
+    '--absent-deg': `${absentDeg}deg`,
+    '--late-deg': `${lateDeg}deg`,
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -575,13 +581,7 @@ function AttendanceStatisticsPage() {
           >
             <div style={styles.pieContainer}>
               <div
-                style={{
-                  ...styles.pieChart,
-                  // @ts-ignore
-                  '--present-deg': `${presentDeg}deg`,
-                  '--absent-deg': `${absentDeg}deg`,
-                  '--late-deg': `${lateDeg}deg`,
-                }}
+                style={pieChartStyle}
               >
                 <div style={styles.pieCenter}>
                   <div style={{ color: '#00d4ff', fontSize: 24, fontWeight: 700 }}>

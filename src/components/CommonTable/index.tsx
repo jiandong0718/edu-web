@@ -1,27 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Table,
-  Button,
-  Space,
-  Input,
-  message,
-  Modal,
-  Checkbox,
-  Tooltip,
-  Badge,
-  Empty,
-} from 'antd';
-import {
-  DownloadOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  SettingOutlined,
-  FileExcelOutlined,
-  InboxOutlined,
-} from '@ant-design/icons';
+import { Table, Button, Space, Input, message, Modal, Checkbox, Tooltip, Badge } from 'antd';
+import { ReloadOutlined, SearchOutlined, SettingOutlined, FileExcelOutlined, InboxOutlined } from '@ant-design/icons';
 import type { TablePaginationConfig } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
-import type { ColumnType } from 'antd/es/table';
 import type { CommonTableProps, FetchParams, ColumnConfig } from './types';
 import { exportToExcel, formatFileName, debounce } from './utils';
 import { styles } from './styles';
@@ -32,7 +13,7 @@ export type { CommonTableProps, FetchParams, PageResult, ExportConfig } from './
  * 通用表格组件
  * 支持分页、筛选、排序、导出、搜索、列配置等功能
  */
-export function CommonTable<T extends Record<string, any>>({
+export function CommonTable<T extends object>({
   columns: propColumns,
   dataSource: propDataSource,
   loading: propLoading,
@@ -62,7 +43,6 @@ export function CommonTable<T extends Record<string, any>>({
   const [dataSource, setDataSource] = useState<T[]>(propDataSource || []);
   const [searchValue, setSearchValue] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [selectedRows, setSelectedRows] = useState<T[]>([]);
   const [columnSettingVisible, setColumnSettingVisible] = useState(false);
   const [columnConfigs, setColumnConfigs] = useState<ColumnConfig[]>([]);
 
@@ -103,12 +83,12 @@ export function CommonTable<T extends Record<string, any>>({
 
   // 加载数据
   const loadData = useCallback(
-    async (params?: Partial<FetchParams>) => {
+    async (params?: Partial<FetchParams<T>>) => {
       if (!onFetch) return;
 
       setLoading(true);
       try {
-        const fetchParams: FetchParams = {
+        const fetchParams: FetchParams<T> = {
           current: pagination.current || 1,
           pageSize: pagination.pageSize || 10,
           filters,
@@ -198,7 +178,7 @@ export function CommonTable<T extends Record<string, any>>({
       try {
         await onRefresh();
         message.success('刷新成功');
-      } catch (error) {
+      } catch {
         message.error('刷新失败');
       } finally {
         setLoading(false);
@@ -236,7 +216,6 @@ export function CommonTable<T extends Record<string, any>>({
   // 处理行选择
   const handleSelectionChange = (keys: React.Key[], rows: T[]) => {
     setSelectedRowKeys(keys);
-    setSelectedRows(rows);
     if (onSelectionChange) {
       onSelectionChange(keys, rows);
     }

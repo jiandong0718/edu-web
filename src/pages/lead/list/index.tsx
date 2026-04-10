@@ -91,7 +91,7 @@ export function Component() {
       const result = await getLeadList(queryParams);
       setDataSource(result.list);
       setTotal(result.total);
-    } catch (error) {
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -103,7 +103,7 @@ export function Component() {
   }, [queryParams]);
 
   // 搜索
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: Partial<LeadQueryParams>) => {
     setQueryParams({
       ...queryParams,
       ...values,
@@ -129,7 +129,7 @@ export function Component() {
           await deleteLead(id);
           message.success('删除成功');
           loadData();
-        } catch (error) {
+        } catch {
           message.error('删除失败');
         }
       },
@@ -141,7 +141,7 @@ export function Component() {
     try {
       await exportLeadList(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
@@ -243,7 +243,7 @@ export function Component() {
       key: 'action',
       width: 180,
       fixed: 'right',
-      render: (_: any, record: Lead) => (
+      render: (_: unknown, record: Lead) => (
         <Space size="small">
           <Button
             type="link"

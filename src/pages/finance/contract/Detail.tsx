@@ -48,6 +48,13 @@ import ContractPrintModal from '@/components/ContractPrintModal';
 import ReceiptPrint from '@/components/ReceiptPrint';
 import './Detail.less';
 
+const normalizeReceiptDetail = (payload: ReceiptDetail | { data?: ReceiptDetail }): ReceiptDetail | null => {
+  if ('data' in payload && payload.data) {
+    return payload.data;
+  }
+  return 'receiptNo' in payload ? payload : null;
+};
+
 const ContractDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -89,7 +96,7 @@ const ContractDetail: React.FC = () => {
       setItems(itemsRes);
       setPayments(paymentsRes);
       setHourAccounts(accountsRes);
-    } catch (error) {
+    } catch {
       message.error('加载合同详情失败');
     } finally {
       setLoading(false);
@@ -154,7 +161,7 @@ const ContractDetail: React.FC = () => {
           await cancelContract(Number(id));
           message.success('合同已作废');
           loadContractDetail();
-        } catch (error) {
+        } catch {
           message.error('作废失败');
         }
       },
@@ -172,8 +179,8 @@ const ContractDetail: React.FC = () => {
     setReceiptLoading(true);
     try {
       const response = await getReceiptDetail(paymentId);
-      setReceiptData(response.data);
-    } catch (error) {
+      setReceiptData(normalizeReceiptDetail(response));
+    } catch {
       message.error('加载收据详情失败');
     } finally {
       setReceiptLoading(false);
@@ -195,7 +202,7 @@ const ContractDetail: React.FC = () => {
     try {
       const records = await getAccountAdjustRecords(accountId);
       setConsumptionRecords(Array.isArray(records) ? records : []);
-    } catch (error) {
+    } catch {
       message.error('加载消课记录失败');
     } finally {
       setConsumptionLoading(false);
@@ -370,8 +377,8 @@ const ContractDetail: React.FC = () => {
     },
     {
       title: '赠送课时',
-      dataIndex: 'frozenHours',
-      key: 'frozenHours',
+      dataIndex: 'giftHours',
+      key: 'giftHours',
       align: 'right',
       width: 100,
       render: (value) => (

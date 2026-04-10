@@ -13,9 +13,10 @@ import {
   Form,
   Row,
   Col,
-  DatePicker,
   message,
   Tooltip,
+  Descriptions,
+  Spin,
 } from 'antd';
 import {
   PlusOutlined,
@@ -33,8 +34,10 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { StudentBatchImport } from '@/components/StudentBatchImport';
-import { getStudentList, deleteStudent, createStudent, updateStudent, exportStudentList } from '@/api/student';
+import { getStudentList, getStudentDetail, deleteStudent, createStudent, updateStudent, exportStudentList } from '@/api/student';
 import type { Student as ApiStudent, StudentFormData, StudentQueryParams } from '@/types/student';
+import { getCampusList } from '@/api/campus';
+import type { Campus } from '@/components/CampusSwitch';
 
 // 学生数据类型
 interface StudentRow {
@@ -49,7 +52,8 @@ interface StudentRow {
   status: 'active' | 'inactive' | 'graduated' | 'suspended';
   courses: string[];
   remainingHours: number;
-  enrollDate: string;
+  createTime: string;
+  campusId: number;
   campus: string;
 }
 
@@ -60,7 +64,7 @@ interface StudentFormValues {
   phone: string;
   parentName: string;
   parentPhone: string;
-  enrollDate: dayjs.Dayjs;
+  campusId: number;
 }
 
 // 样式定义
@@ -152,7 +156,8 @@ const mapApiStudentToRow = (student: ApiStudent): StudentRow => ({
   status: mapStatusToRow(student.status),
   courses: [],
   remainingHours: 0,
-  enrollDate: student.enrollDate,
+  createTime: student.createTime,
+  campusId: student.campusId,
   campus: student.campusName || '',
 });
 
@@ -166,9 +171,17 @@ function StudentList() {
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [campusFilter, setCampusFilter] = useState<string | undefined>(undefined);
+  const [campusFilter, setCampusFilter] = useState<number | undefined>(undefined);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 10 });
   const [form] = Form.useForm();
+
+  // 详情弹窗
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailData, setDetailData] = useState<ApiStudent | null>(null);
+
+  // 动态校区列表
+  const [campusOptions, setCampusOptions] = useState<Campus[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -179,6 +192,7 @@ function StudentList() {
       };
       if (searchKeyword) params.name = searchKeyword;
       if (statusFilter && statusFilter !== 'all') params.status = statusFilter as StudentQueryParams['status'];
+      if (typeof campusFilter === 'number') params.campusId = campusFilter;
       const res = await getStudentList(params);
       const list = Array.isArray(res.list) ? res.list : [];
       setStudents(list.map(mapApiStudentToRow));
@@ -193,6 +207,23 @@ function StudentList() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    getCampusList().then(res => setCampusOptions(res.list)).catch(() => message.error('加载校区列表失败'));
+  }, []);
+
+  const handleViewDetail = async (record: StudentRow) => {
+    setDetailVisible(true);
+    setDetailLoading(true);
+    try {
+      const data = await getStudentDetail(record.id);
+      setDetailData(data);
+    } catch {
+      message.error('加载学生详情失败');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   // 表格列定义
   const columns: ColumnsType<StudentRow> = [
@@ -314,9 +345,9 @@ function StudentList() {
       },
     },
     {
-      title: '入学日期',
-      dataIndex: 'enrollDate',
-      key: 'enrollDate',
+      title: '建档时间',
+      dataIndex: 'createTime',
+      key: 'createTime',
       width: 120,
       render: (date: string) => (
         <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>{date}</span>
@@ -335,7 +366,7 @@ function StudentList() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00d4ff' }}
-              onClick={() => message.info(`查看: ${record.name}`)}
+              onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
           <Tooltip title="编辑">
@@ -345,10 +376,7 @@ function StudentList() {
               style={{ color: '#00ff88' }}
               onClick={() => {
                 setEditingStudent(record);
-                form.setFieldsValue({
-                  ...record,
-                  enrollDate: record.enrollDate ? dayjs(record.enrollDate) : undefined,
-                });
+                form.setFieldsValue(record);
                 setIsModalOpen(true);
               }}
             />
@@ -396,6 +424,7 @@ function StudentList() {
       };
       if (searchKeyword) params.name = searchKeyword;
       if (statusFilter && statusFilter !== 'all') params.status = statusFilter as StudentQueryParams['status'];
+      if (typeof campusFilter === 'number') params.campusId = campusFilter;
       await exportStudentList(params);
       message.success('导出成功');
     } catch {
@@ -422,8 +451,11 @@ function StudentList() {
         school: '',
         grade: '',
         status: 'active',
-        campusId: 1,
-        enrollDate: values.enrollDate.format('YYYY-MM-DD'),
+        campusId: values.campusId,
+        // 后端当前未开放独立入学日期字段，前端不再暴露可编辑输入
+        enrollDate: editingStudent?.createTime
+          ? dayjs(editingStudent.createTime).format('YYYY-MM-DD')
+          : dayjs().format('YYYY-MM-DD'),
       };
 
       if (editingStudent) {
@@ -522,7 +554,7 @@ function StudentList() {
               { label: '在读', value: 'active' },
               { label: '停课', value: 'inactive' },
               { label: '结业', value: 'graduated' },
-              { label: '休学', value: 'suspended' },
+              { label: '休学', value: 'dropout' },
             ]}
             allowClear
           />
@@ -531,11 +563,7 @@ function StudentList() {
             style={styles.select}
             value={campusFilter}
             onChange={(value) => setCampusFilter(value)}
-            options={[
-              { label: '全部', value: 'all' },
-              { label: '总部校区', value: '总部校区' },
-              { label: '分部校区', value: '分部校区' },
-            ]}
+            options={campusOptions.map((c) => ({ label: c.name, value: c.id }))}
             allowClear
           />
           <Button
@@ -622,8 +650,11 @@ function StudentList() {
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label="入学日期" name="enrollDate" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} />
+          <Form.Item label="所属校区" name="campusId" rules={[{ required: true, message: '请选择所属校区' }]}>
+            <Select
+              placeholder="请选择校区"
+              options={campusOptions.map((campus) => ({ label: campus.name, value: campus.id }))}
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -634,6 +665,41 @@ function StudentList() {
         onCancel={() => setIsImportModalOpen(false)}
         onSuccess={handleImportSuccess}
       />
+
+      {/* 学生详情弹窗 */}
+      <Modal
+        title="学生详情"
+        open={detailVisible}
+        onCancel={() => setDetailVisible(false)}
+        footer={null}
+        width={700}
+      >
+        {detailLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : detailData ? (
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="姓名">{detailData.name}</Descriptions.Item>
+            <Descriptions.Item label="性别">{detailData.gender === 'male' ? '男' : '女'}</Descriptions.Item>
+            <Descriptions.Item label="手机号">{detailData.phone}</Descriptions.Item>
+            <Descriptions.Item label="身份证号">{detailData.idCard || '-'}</Descriptions.Item>
+            <Descriptions.Item label="生日">{detailData.birthday || '-'}</Descriptions.Item>
+            <Descriptions.Item label="学校">{detailData.school || '-'}</Descriptions.Item>
+            <Descriptions.Item label="年级">{detailData.grade || '-'}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={detailData.status === 'active' ? 'green' : detailData.status === 'graduated' ? 'blue' : 'red'}>
+                {detailData.status === 'active' ? '在读' : detailData.status === 'graduated' ? '结业' : detailData.status === 'inactive' ? '停课' : '休学'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="家长姓名">{detailData.parentName}</Descriptions.Item>
+            <Descriptions.Item label="家长电话">{detailData.parentPhone}</Descriptions.Item>
+            <Descriptions.Item label="校区">{detailData.campusName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="建档时间">{detailData.createTime || '-'}</Descriptions.Item>
+            <Descriptions.Item label="地址" span={2}>{detailData.address || '-'}</Descriptions.Item>
+            <Descriptions.Item label="备注" span={2}>{detailData.remark || '-'}</Descriptions.Item>
+            <Descriptions.Item label="创建时间" span={2}>{detailData.createTime || '-'}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Modal>
     </div>
   );
 }

@@ -23,7 +23,6 @@ import {
   CalendarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 import {
   getLeaveList,
   approveLeave,
@@ -142,7 +141,7 @@ function LeaveManagementPage() {
       const data = await getLeaveList(params);
       setDataSource(data.list);
       setTotal(data.total);
-    } catch (error) {
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -334,7 +333,7 @@ function LeaveManagementPage() {
           });
           message.success('操作成功');
           loadData();
-        } catch (error) {
+        } catch {
           message.error('操作失败');
         }
       },
@@ -361,7 +360,7 @@ function LeaveManagementPage() {
       message.success('补课安排成功');
       setIsMakeupModalOpen(false);
       loadData();
-    } catch (error) {
+    } catch {
       message.error('补课安排失败');
     }
   };

@@ -141,7 +141,7 @@ export function Component() {
         leave: res.list.filter(t => t.status === 'leave').length,
       };
       setStatistics(stats);
-    } catch (error) {
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -158,7 +158,10 @@ export function Component() {
   };
 
   // 筛选
-  const handleFilter = (key: string, value: any) => {
+  const handleFilter = <K extends keyof TeacherQueryParams>(
+    key: K,
+    value: TeacherQueryParams[K]
+  ) => {
     setQueryParams({ ...queryParams, [key]: value, page: 1 });
   };
 
@@ -190,7 +193,7 @@ export function Component() {
       await deleteTeacher(id);
       message.success('删除成功');
       loadData();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -200,7 +203,7 @@ export function Component() {
     try {
       await exportTeacherList(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };

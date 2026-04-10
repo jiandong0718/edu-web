@@ -17,7 +17,6 @@ import {
   DollarOutlined,
   TrophyOutlined,
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import {
   getEnrollmentOverview,
   getEnrollmentTrend,
@@ -27,6 +26,57 @@ import {
 } from '@/api/dashboard';
 
 const { RangePicker } = DatePicker;
+
+const unwrapPayload = <T,>(payload: T | { data?: T } | null | undefined): T | undefined => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T | undefined;
+  }
+  return (payload ?? undefined) as T | undefined;
+};
+
+const buildPieSegments = (values: number[]) => {
+  let angle = -90;
+  return values.map((value) => {
+    const startAngle = angle;
+    angle += value;
+    return {
+      startAngle,
+      endAngle: angle,
+      largeArc: value > 180 ? 1 : 0,
+    };
+  });
+};
+
+type TimeRange = 'today' | 'week' | 'month' | 'custom';
+
+interface EnrollmentOverviewState {
+  leadStats?: { total: number; newLeads?: number; pending: number };
+  trialStats?: { total: number; scheduled: number; completed: number; conversionRate?: number };
+  conversionStats?: { dealConversionRate?: number };
+  dealStats?: { amount: number; count: number };
+}
+
+interface EnrollmentTrendState {
+  leadTrend?: Array<{ date: string; count: number }>;
+}
+
+interface EnrollmentFunnelState {
+  stages?: Array<{ name: string; count: number; conversionRate: number }>;
+}
+
+interface EnrollmentSourceState {
+  sources?: Array<{ source: string; count: number }>;
+}
+
+interface AdvisorRankingState {
+  advisors?: Array<{ advisorName: string; dealCount: number; dealAmount?: number }>;
+}
+
+interface EnrollmentQuery {
+  timeRange: TimeRange;
+  startDate?: string;
+  endDate?: string;
+}
 
 // 统计卡片样式
 const cardStyle = {
@@ -110,7 +160,9 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
   if (!data || data.length === 0) return null;
 
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  let currentAngle = -90;
+  const segments = buildPieSegments(
+    data.map((item) => (item.value / total) * 360)
+  );
 
   const colors = ['#00d4ff', '#0099ff', '#00ffaa', '#ff6b9d', '#ffd700'];
 
@@ -118,11 +170,9 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
       <svg width="120" height="120" viewBox="0 0 120 120">
         {data.map((d, i) => {
-          const percentage = d.value / total;
-          const angle = percentage * 360;
-          const startAngle = currentAngle;
-          const endAngle = currentAngle + angle;
-          currentAngle = endAngle;
+          const segment = segments[i];
+          const startAngle = segment.startAngle;
+          const endAngle = segment.endAngle;
 
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = (endAngle * Math.PI) / 180;
@@ -132,12 +182,10 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
           const x2 = 60 + 50 * Math.cos(endRad);
           const y2 = 60 + 50 * Math.sin(endRad);
 
-          const largeArc = angle > 180 ? 1 : 0;
-
           return (
             <path
               key={i}
-              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${segment.largeArc} 1 ${x2} ${y2} Z`}
               fill={colors[i % colors.length]}
               opacity={0.8}
             />
@@ -259,13 +307,13 @@ const BarChart = ({ data }: { data: { label: string; value: number; amount?: num
 
 function EnrollmentDashboard() {
   const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState<string>('month');
+  const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [customDates, setCustomDates] = useState<[string, string] | null>(null);
-  const [overview, setOverview] = useState<any>(null);
-  const [trend, setTrend] = useState<any>(null);
-  const [funnel, setFunnel] = useState<any>(null);
-  const [source, setSource] = useState<any>(null);
-  const [advisorRanking, setAdvisorRanking] = useState<any>(null);
+  const [overview, setOverview] = useState<EnrollmentOverviewState | null>(null);
+  const [trend, setTrend] = useState<EnrollmentTrendState | null>(null);
+  const [funnel, setFunnel] = useState<EnrollmentFunnelState | null>(null);
+  const [source, setSource] = useState<EnrollmentSourceState | null>(null);
+  const [advisorRanking, setAdvisorRanking] = useState<AdvisorRankingState | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -274,7 +322,7 @@ function EnrollmentDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const params: any = { timeRange };
+      const params: EnrollmentQuery = { timeRange };
       if (timeRange === 'custom' && customDates) {
         params.startDate = customDates[0];
         params.endDate = customDates[1];
@@ -288,12 +336,32 @@ function EnrollmentDashboard() {
         getEnrollmentAdvisorRanking({ ...params, limit: 10 }),
       ]);
 
-      setOverview(overviewRes.data);
-      setTrend(trendRes.data);
-      setFunnel(funnelRes.data);
-      setSource(sourceRes.data);
-      setAdvisorRanking(advisorRes.data);
-    } catch (error) {
+      setOverview(
+        unwrapPayload<EnrollmentOverviewState>(
+          overviewRes as EnrollmentOverviewState | { data?: EnrollmentOverviewState }
+        ) ?? null
+      );
+      setTrend(
+        unwrapPayload<EnrollmentTrendState>(
+          trendRes as EnrollmentTrendState | { data?: EnrollmentTrendState }
+        ) ?? null
+      );
+      setFunnel(
+        unwrapPayload<EnrollmentFunnelState>(
+          funnelRes as EnrollmentFunnelState | { data?: EnrollmentFunnelState }
+        ) ?? null
+      );
+      setSource(
+        unwrapPayload<EnrollmentSourceState>(
+          sourceRes as EnrollmentSourceState | { data?: EnrollmentSourceState }
+        ) ?? null
+      );
+      setAdvisorRanking(
+        unwrapPayload<AdvisorRankingState>(
+          advisorRes as AdvisorRankingState | { data?: AdvisorRankingState }
+        ) ?? null
+      );
+    } catch {
       message.error('获取招生数据失败');
     } finally {
       setLoading(false);
@@ -461,7 +529,7 @@ function EnrollmentDashboard() {
                       <span style={{ color: '#ffd700' }}>● 成交</span>
                     </div>
                     <LineChart
-                      data={trend.leadTrend?.map((item: any) => ({
+                      data={trend.leadTrend?.map((item) => ({
                         label: item.date.slice(5),
                         value: item.count,
                       })) || []}
@@ -480,7 +548,7 @@ function EnrollmentDashboard() {
               >
                 {source && (
                   <PieChart
-                    data={source.sources?.map((item: any) => ({
+                    data={source.sources?.map((item) => ({
                       name: item.source,
                       value: item.count,
                     })) || []}
@@ -500,7 +568,7 @@ function EnrollmentDashboard() {
               >
                 {funnel && (
                   <FunnelChart
-                    data={funnel.stages?.map((item: any) => ({
+                    data={funnel.stages?.map((item) => ({
                       name: item.name,
                       value: item.count,
                       rate: item.conversionRate,
@@ -524,7 +592,7 @@ function EnrollmentDashboard() {
               >
                 {advisorRanking && (
                   <BarChart
-                    data={advisorRanking.advisors?.map((item: any) => ({
+                    data={advisorRanking.advisors?.map((item) => ({
                       label: item.advisorName,
                       value: item.dealCount,
                       amount: item.dealAmount,

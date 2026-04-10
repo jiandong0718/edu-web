@@ -49,7 +49,7 @@ fi
 if [[ "$repo_kind" == "edu-server" ]]; then
   for file in "${staged_files[@]}"; do
     case "$file" in
-      index.html|vite.config.ts|tsconfig.app.json|tsconfig.node.json|src/App.tsx|src/main.tsx|public/vite.svg)
+      edu-web/*)
         violations+=("$file -> frontend (edu-web) path detected in edu-server repository.")
         ;;
     esac

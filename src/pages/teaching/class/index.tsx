@@ -79,7 +79,7 @@ export default function Component() {
       const response = await getClassList(queryParams);
       setDataSource(response.list);
       setTotal(response.total);
-    } catch (error) {
+    } catch {
       message.error('加载班级列表失败');
     } finally {
       setLoading(false);
@@ -141,7 +141,7 @@ export default function Component() {
       await deleteClass(record.id);
       message.success('删除成功');
       loadData();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -246,7 +246,7 @@ export default function Component() {
                 '0%': '#00d4ff',
                 '100%': '#0099ff',
               }}
-              format={(p) => (
+              format={() => (
                 <span style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: 12 }}>
                   {record.completedHours}/{record.totalHours}h
                 </span>

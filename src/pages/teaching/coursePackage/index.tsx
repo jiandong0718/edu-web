@@ -17,6 +17,8 @@ import {
   Divider,
   Popconfirm,
   Typography,
+  Descriptions,
+  Spin,
 } from 'antd';
 import {
   PlusOutlined,
@@ -41,6 +43,7 @@ import type {
 } from '@/types/coursePackage';
 import {
   getCoursePackageList,
+  getCoursePackageDetail,
   createCoursePackage,
   updateCoursePackage,
   deleteCoursePackage,
@@ -52,7 +55,7 @@ import {
 const { Search } = Input;
 const { Option } = Select;
 const { TextArea } = Input;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const styles = {
   pageHeader: {
@@ -152,6 +155,9 @@ export function Component() {
   const [editingId, setEditingId] = useState<number>();
   const [availableCourses, setAvailableCourses] = useState<CourseInfo[]>([]);
   const [selectedCourseKeys, setSelectedCourseKeys] = useState<number[]>([]);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailData, setDetailData] = useState<CoursePackage | null>(null);
   const [form] = Form.useForm();
 
   // 加载数据
@@ -170,7 +176,7 @@ export function Component() {
         totalRevenue: res.list.reduce((sum, p) => sum + p.price, 0),
       };
       setStatistics(stats);
-    } catch (error) {
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -182,7 +188,7 @@ export function Component() {
     try {
       const courses = await getAvailableCourses();
       setAvailableCourses(courses);
-    } catch (error) {
+    } catch {
       message.error('加载课程列表失败');
     }
   };
@@ -201,7 +207,10 @@ export function Component() {
   };
 
   // 筛选
-  const handleFilter = (key: string, value: any) => {
+  const handleFilter = <K extends keyof CoursePackageQueryParams>(
+    key: K,
+    value: CoursePackageQueryParams[K]
+  ) => {
     setQueryParams({ ...queryParams, [key]: value, page: 1 });
   };
 
@@ -216,6 +225,20 @@ export function Component() {
     setSelectedCourseKeys([]);
     form.resetFields();
     setFormVisible(true);
+  };
+
+  // 查看详情
+  const handleViewDetail = async (id: number) => {
+    setDetailVisible(true);
+    setDetailLoading(true);
+    try {
+      const data = await getCoursePackageDetail(id);
+      setDetailData(data);
+    } catch {
+      message.error('获取课程包详情失败');
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   // 编辑
@@ -239,7 +262,7 @@ export function Component() {
       await deleteCoursePackage(id);
       message.success('删除成功');
       loadData();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -250,7 +273,7 @@ export function Component() {
       await updateCoursePackageStatus(id, status);
       message.success('状态更新成功');
       loadData();
-    } catch (error) {
+    } catch {
       message.error('状态更新失败');
     }
   };
@@ -260,7 +283,7 @@ export function Component() {
     try {
       await exportCoursePackageList(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
@@ -293,8 +316,8 @@ export function Component() {
       }
       setFormVisible(false);
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '操作失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -438,7 +461,7 @@ export function Component() {
               type="text"
               icon={<EyeOutlined />}
               style={{ color: '#00d4ff' }}
-              onClick={() => message.info('查看详情功能开发中')}
+              onClick={() => handleViewDetail(record.id)}
             />
           </Tooltip>
           <Tooltip title="编辑">
@@ -652,14 +675,14 @@ export function Component() {
             style={{ width: 140 }}
             min={0}
             prefix="¥"
-            onChange={(value) => handleFilter('minPrice', value)}
+            onChange={(value) => handleFilter('minPrice', value ?? undefined)}
           />
           <InputNumber
             placeholder="最高价格"
             style={{ width: 140 }}
             min={0}
             prefix="¥"
-            onChange={(value) => handleFilter('maxPrice', value)}
+            onChange={(value) => handleFilter('maxPrice', value ?? undefined)}
           />
           <Button onClick={handleReset}>重置</Button>
         </div>
@@ -841,6 +864,96 @@ export function Component() {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 详情弹窗 */}
+      <Modal
+        title={
+          <div style={{ color: '#fff', fontSize: 18, fontWeight: 600 }}>
+            课程包详情
+          </div>
+        }
+        open={detailVisible}
+        onCancel={() => setDetailVisible(false)}
+        footer={
+          <Button onClick={() => setDetailVisible(false)}>关闭</Button>
+        }
+        width={700}
+        destroyOnClose
+        styles={{
+          body: { background: '#111827', maxHeight: '70vh', overflowY: 'auto' },
+          header: { background: '#111827', borderBottom: '1px solid rgba(0, 212, 255, 0.1)' },
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+        }}
+      >
+        <Spin spinning={detailLoading}>
+          {detailData && (
+            <>
+              <Descriptions
+                column={2}
+                labelStyle={{ color: 'rgba(255, 255, 255, 0.65)' }}
+                contentStyle={{ color: '#fff' }}
+                style={{ marginBottom: 16 }}
+              >
+                <Descriptions.Item label="课程包名称" span={2}>
+                  {detailData.name}
+                </Descriptions.Item>
+                <Descriptions.Item label="描述" span={2}>
+                  {detailData.description || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="原价">
+                  <span style={{ color: 'rgba(255, 255, 255, 0.45)', textDecoration: 'line-through' }}>
+                    ¥{detailData.originalPrice.toLocaleString()}
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="优惠价">
+                  <span style={{ color: '#ffaa00', fontWeight: 600, fontSize: 16 }}>
+                    ¥{detailData.price.toLocaleString()}
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="折扣">
+                  <Tag
+                    style={{
+                      background: 'rgba(255, 77, 106, 0.1)',
+                      border: '1px solid rgba(255, 77, 106, 0.3)',
+                      color: '#ff4d6a',
+                    }}
+                  >
+                    {detailData.discount ? `${detailData.discount}折` : '-'}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="有效期">{detailData.validDays} 天</Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <Tag
+                    style={{
+                      background: statusMap[detailData.status].bgColor,
+                      border: `1px solid ${statusMap[detailData.status].color}40`,
+                      color: statusMap[detailData.status].color,
+                    }}
+                  >
+                    {statusMap[detailData.status].text}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="创建时间">
+                  {detailData.createTime}
+                </Descriptions.Item>
+              </Descriptions>
+
+              <Divider style={{ borderColor: 'rgba(0, 212, 255, 0.1)' }} />
+
+              <div style={{ color: '#00d4ff', fontWeight: 600, marginBottom: 12 }}>
+                包含课程（{detailData.courses.length}）
+              </div>
+              <Space wrap>
+                {detailData.courses.map((course) => (
+                  <Tag key={course.id} style={styles.courseTag}>
+                    {course.name}
+                  </Tag>
+                ))}
+              </Space>
+            </>
+          )}
+        </Spin>
       </Modal>
     </div>
   );

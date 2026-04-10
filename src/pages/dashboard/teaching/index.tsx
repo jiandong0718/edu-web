@@ -41,6 +41,26 @@ import type {
 
 const { RangePicker } = DatePicker;
 
+const unwrapPayload = <T,>(payload: T | { data?: T } | null | undefined): T | undefined => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data as T | undefined;
+  }
+  return (payload ?? undefined) as T | undefined;
+};
+
+const buildPieSegments = (values: number[]) => {
+  let angle = -90;
+  return values.map((value) => {
+    const startAngle = angle;
+    angle += value;
+    return {
+      startAngle,
+      endAngle: angle,
+      largeArc: value > 180 ? 1 : 0,
+    };
+  });
+};
+
 // 统计卡片样式
 const cardStyle = {
   background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 100%)',
@@ -137,7 +157,9 @@ const PieChart = ({ data }: { data: ClassStatusDistribution[] }) => {
   }
 
   const total = data.reduce((sum, d) => sum + d.count, 0);
-  let currentAngle = -90;
+  const segments = buildPieSegments(
+    data.map((item) => (item.count / total) * 360)
+  );
 
   const colors = ['#00d4ff', '#0099ff', '#00ffaa', '#ff6b9d', '#ffd700'];
 
@@ -145,11 +167,9 @@ const PieChart = ({ data }: { data: ClassStatusDistribution[] }) => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
       <svg width="120" height="120" viewBox="0 0 120 120">
         {data.map((d, i) => {
-          const percentage = d.count / total;
-          const angle = percentage * 360;
-          const startAngle = currentAngle;
-          const endAngle = currentAngle + angle;
-          currentAngle = endAngle;
+          const segment = segments[i];
+          const startAngle = segment.startAngle;
+          const endAngle = segment.endAngle;
 
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = (endAngle * Math.PI) / 180;
@@ -159,12 +179,10 @@ const PieChart = ({ data }: { data: ClassStatusDistribution[] }) => {
           const x2 = 60 + 50 * Math.cos(endRad);
           const y2 = 60 + 50 * Math.sin(endRad);
 
-          const largeArc = angle > 180 ? 1 : 0;
-
           return (
             <path
               key={i}
-              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${segment.largeArc} 1 ${x2} ${y2} Z`}
               fill={colors[i % colors.length]}
               opacity={0.8}
             />
@@ -259,7 +277,7 @@ const TeachingDashboard = () => {
         setCampusList(res.list || []);
       })
       .catch(() => {
-        // Campus list fetch failed silently
+        message.error('加载校区列表失败');
       });
   }, []);
 
@@ -282,7 +300,7 @@ const TeachingDashboard = () => {
         fetchCourseConsumption(),
         fetchClassDistribution(),
       ]);
-    } catch (error) {
+    } catch {
       message.error('获取教学数据失败');
     } finally {
       setLoading(false);
@@ -292,9 +310,9 @@ const TeachingDashboard = () => {
   const fetchOverview = async () => {
     try {
       const result = await getTeachingOverview(campusId);
-      setOverview(result.data);
-    } catch (error) {
-      // Silently handled
+      setOverview(unwrapPayload<TeachingOverview>(result) ?? null);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 
@@ -305,45 +323,45 @@ const TeachingDashboard = () => {
         startDate: dateRange[0].format('YYYY-MM-DD'),
         endDate: dateRange[1].format('YYYY-MM-DD'),
       });
-      setAttendanceTrend(result.data || []);
-    } catch (error) {
-      // Silently handled
+      setAttendanceTrend(unwrapPayload<AttendanceRateItem[]>(result) ?? []);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 
   const fetchClassStats = async () => {
     try {
       const result = await getClassStats({ campusId });
-      setClassStats(result.data || []);
-    } catch (error) {
-      // Silently handled
+      setClassStats(unwrapPayload<ClassStatsItem[]>(result) ?? []);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 
   const fetchTeacherStats = async () => {
     try {
       const result = await getTeacherStats(campusId);
-      setTeacherStats(result.data || []);
-    } catch (error) {
-      // Silently handled
+      setTeacherStats(unwrapPayload<TeacherStatsItem[]>(result) ?? []);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 
   const fetchCourseConsumption = async () => {
     try {
       const result = await getCourseConsumption({ campusId, limit: 10 });
-      setCourseConsumption(result.data || []);
-    } catch (error) {
-      // Silently handled
+      setCourseConsumption(unwrapPayload<CourseConsumptionItem[]>(result) ?? []);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 
   const fetchClassDistribution = async () => {
     try {
       const result = await getClassStatusDistribution(campusId);
-      setClassDistribution(result.data || []);
-    } catch (error) {
-      // Silently handled
+      setClassDistribution(unwrapPayload<ClassStatusDistribution[]>(result) ?? []);
+    } catch {
+      // Request interceptor already handles the error toast.
     }
   };
 

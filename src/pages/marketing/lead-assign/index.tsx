@@ -20,8 +20,8 @@ import type { Lead, LeadQueryParams } from '@/types/lead';
 import { getLeadList, assignLeads, autoAssignLeads } from '@/api/lead';
 import { getAdvisorList } from '@/api/user';
 import type { User } from '@/api/user';
-import { getCampusList } from '@/api/system';
-import type { Campus } from '@/api/system';
+import { getCampusList } from '@/api/campus';
+import type { Campus } from '@/components/CampusSwitch';
 
 const { Option } = Select;
 
@@ -80,19 +80,20 @@ const styles = {
 // 线索状态映射
 const statusMap: Record<string, { text: string; color: string }> = {
   new: { text: '新线索', color: '#00d4ff' },
-  contacted: { text: '已联系', color: '#00ff88' },
-  qualified: { text: '已确认', color: '#0099ff' },
-  converted: { text: '已转化', color: '#9d4edd' },
+  following: { text: '跟进中', color: '#0099ff' },
+  appointed: { text: '已预约', color: '#00ff88' },
+  trialed: { text: '已试听', color: '#ffaa00' },
+  converted: { text: '已成交', color: '#52c41a' },
   lost: { text: '已流失', color: '#ff4d6a' },
 };
 
 // 线索来源映射
 const sourceMap: Record<string, string> = {
-  online: '线上',
-  offline: '线下',
+  online_ad: '线上广告',
+  offline: '地推',
   referral: '转介绍',
-  event: '活动',
-  other: '其他',
+  walk_in: '自然到访',
+  phone: '电话咨询',
 };
 
 export function Component() {
@@ -113,7 +114,7 @@ export function Component() {
   // 加载顾问列表和校区列表
   useEffect(() => {
     getAdvisorList().then(setAdvisors).catch(() => message.error('加载顾问列表失败'));
-    getCampusList().then(setCampusList).catch(() => message.error('加载校区列表失败'));
+    getCampusList().then(res => setCampusList(res.list)).catch(() => message.error('加载校区列表失败'));
   }, []);
 
   // 加载数据
@@ -123,7 +124,7 @@ export function Component() {
       const res = await getLeadList(queryParams);
       setDataSource(res.list);
       setTotal(res.total);
-    } catch (error) {
+    } catch {
       message.error('加载数据失败');
     } finally {
       setLoading(false);
@@ -155,8 +156,8 @@ export function Component() {
       setSelectedRowKeys([]);
       setAssigneeId(undefined);
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '分配失败');
     } finally {
       setAssigning(false);
     }
@@ -184,8 +185,8 @@ export function Component() {
       message.success(`成功自动分配 ${selectedRowKeys.length} 条线索`);
       setSelectedRowKeys([]);
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '快速分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '快速分配失败');
     } finally {
       setAssigning(false);
     }
@@ -243,7 +244,7 @@ export function Component() {
             color: '#00d4ff',
           }}
         >
-          {sourceMap[source]}
+          {sourceMap[source] || source || '-'}
         </Tag>
       ),
     },
@@ -253,7 +254,7 @@ export function Component() {
       key: 'status',
       width: 100,
       render: (status: string) => {
-        const statusInfo = statusMap[status];
+        const statusInfo = statusMap[status] || { text: status || '-', color: '#666' };
         return (
           <Tag
             style={{

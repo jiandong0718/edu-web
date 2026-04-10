@@ -2,6 +2,8 @@ import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { message } from 'antd';
 
+type RequestBody = unknown;
+
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -78,24 +80,24 @@ request.interceptors.response.use(
 
 // 封装请求方法
 export const http = {
-  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return request.get(url, config);
   },
 
-  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  post<T = unknown>(url: string, data?: RequestBody, config?: AxiosRequestConfig): Promise<T> {
     return request.post(url, data, config);
   },
 
-  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  put<T = unknown>(url: string, data?: RequestBody, config?: AxiosRequestConfig): Promise<T> {
     return request.put(url, data, config);
   },
 
-  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     return request.delete(url, config);
   },
 
   // 文件上传
-  upload<T = any>(url: string, file: File, onProgress?: (percent: number) => void): Promise<T> {
+  upload<T = unknown>(url: string, file: File, onProgress?: (percent: number) => void): Promise<T> {
     const formData = new FormData();
     formData.append('file', file);
     return request.post(url, formData, {
@@ -113,8 +115,8 @@ export const http = {
 
   // 文件下载
   download(url: string, filename?: string, config?: AxiosRequestConfig): Promise<void> {
-    return request.get(url, { ...config, responseType: 'blob' }).then((response: any) => {
-      const blob = new Blob([response.data]);
+    return request.get(url, { ...config, responseType: 'blob' }).then((response: AxiosResponse<Blob>) => {
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;

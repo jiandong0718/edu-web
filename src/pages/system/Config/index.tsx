@@ -28,6 +28,7 @@ import {
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { TablePaginationConfig } from 'antd/es/table';
 import { CommonTable } from '@/components/CommonTable';
 import type {
   SystemConfig,
@@ -47,6 +48,19 @@ import {
   getConfigStatistics,
   exportConfigList,
 } from '@/api/config';
+
+const normalizePageResult = <T,>(
+  payload: { list?: T[]; total?: number } | { data?: { list?: T[]; total?: number } } | null | undefined
+) => {
+  const result = (
+    payload && typeof payload === 'object' && 'data' in payload && payload.data
+      ? payload.data
+      : payload
+  ) as { list?: T[]; total?: number } | null | undefined;
+  const list = Array.isArray(result?.list) ? result.list : [];
+  const total = typeof result?.total === 'number' ? result.total : list.length;
+  return { list, total };
+};
 
 // 参数类型选项
 const TYPE_OPTIONS = [
@@ -170,9 +184,10 @@ export default function SystemConfigManagement() {
         category: selectedCategory === 'all' ? undefined : (selectedCategory as ConfigCategory),
       };
       const response = await getConfigList(params);
-      setConfigs(response.data.list);
-      setTotal(response.data.total);
-    } catch (error) {
+      const pageResult = normalizePageResult<SystemConfig>(response);
+      setConfigs(pageResult.list);
+      setTotal(pageResult.total);
+    } catch {
       message.error('获取系统参数列表失败');
     } finally {
       setLoading(false);
@@ -184,8 +199,8 @@ export default function SystemConfigManagement() {
     try {
       const data = await getConfigStatistics();
       setStatistics(data);
-    } catch (error) {
-      // Statistics fetch failed silently
+    } catch {
+      message.error('加载统计数据失败');
     }
   };
 
@@ -413,7 +428,10 @@ export default function SystemConfigManagement() {
   };
 
   // 处理筛选
-  const handleFilter = (key: string, value: any) => {
+  const handleFilter = (
+    key: keyof ConfigQueryParams,
+    value: ConfigQueryParams[keyof ConfigQueryParams]
+  ) => {
     setQueryParams({ ...queryParams, [key]: value, page: 1 });
   };
 
@@ -453,7 +471,7 @@ export default function SystemConfigManagement() {
       message.success('删除成功');
       fetchConfigs();
       fetchStatistics();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -465,7 +483,7 @@ export default function SystemConfigManagement() {
       message.success('状态更新成功');
       fetchConfigs();
       fetchStatistics();
-    } catch (error) {
+    } catch {
       message.error('状态更新失败');
     }
   };
@@ -489,7 +507,7 @@ export default function SystemConfigManagement() {
       setModalVisible(false);
       fetchConfigs();
       fetchStatistics();
-    } catch (error) {
+    } catch {
       // Error handled by form validation UI
     }
   };
@@ -505,7 +523,7 @@ export default function SystemConfigManagement() {
     try {
       await refreshConfigCache();
       message.success('缓存刷新成功');
-    } catch (error) {
+    } catch {
       message.error('缓存刷新失败');
     }
   };
@@ -519,13 +537,13 @@ export default function SystemConfigManagement() {
       };
       await exportConfigList(params);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
   // 处理分页变化
-  const handleTableChange = (pagination: any, _filters: any, _sorter: any) => {
+  const handleTableChange = (pagination: TablePaginationConfig) => {
     setQueryParams({
       ...queryParams,
       page: pagination.current,

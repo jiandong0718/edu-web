@@ -26,7 +26,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { TablePaginationConfig } from 'antd/es/table';
-import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type { Dayjs } from 'dayjs';
 import { CommonTable } from '@/components/CommonTable';
 import {
@@ -321,11 +320,7 @@ export default function Component() {
     }
   };
 
-  const handleTableChange = (
-    pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    _sorter: SorterResult<LoginLog> | SorterResult<LoginLog>[]
-  ) => {
+  const handleTableChange = (pagination: TablePaginationConfig) => {
     setQueryParams((prev) => ({
       ...prev,
       page: pagination.current || 1,

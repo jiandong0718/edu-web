@@ -27,8 +27,6 @@ import {
 import {
   ArrowLeftOutlined,
   EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
   UserOutlined,
   TeamOutlined,
   ClockCircleOutlined,
@@ -44,6 +42,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type {
   Class,
+  ClassStatus,
   ClassStudent,
   AssignStudentParams,
   RemoveStudentParams,
@@ -154,7 +153,7 @@ export function Component() {
     try {
       const data = await getClassDetail(classId);
       setClassInfo(data);
-    } catch (error) {
+    } catch {
       message.error('加载班级信息失败');
     } finally {
       setLoading(false);
@@ -166,7 +165,7 @@ export function Component() {
     try {
       const data = await getClassStudents(classId);
       setStudents(data);
-    } catch (error) {
+    } catch {
       message.error('加载学员列表失败');
     }
   };
@@ -180,7 +179,7 @@ export function Component() {
         status: 'active',
       });
       setAvailableStudents(response.list);
-    } catch (error) {
+    } catch {
       message.error('加载学员列表失败');
     }
   };
@@ -218,15 +217,14 @@ export function Component() {
         classId,
         studentIds: values.studentIds,
         joinDate: values.joinDate.format('YYYY-MM-DD'),
-        remark: values.remark,
       };
       await assignStudents(params);
       message.success('添加学员成功');
       setAddStudentModalVisible(false);
       loadStudents();
       loadClassDetail();
-    } catch (error: any) {
-      message.error(error.message || '添加学员失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '添加学员失败');
     }
   };
 
@@ -250,15 +248,14 @@ export function Component() {
         classId,
         studentId: selectedStudent.studentId,
         leaveDate: values.leaveDate.format('YYYY-MM-DD'),
-        reason: values.reason,
       };
       await removeStudent(params);
       message.success('移除学员成功');
       setRemoveStudentModalVisible(false);
       loadStudents();
       loadClassDetail();
-    } catch (error: any) {
-      message.error(error.message || '移除学员失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '移除学员失败');
     }
   };
 
@@ -284,8 +281,8 @@ export function Component() {
       message.success('班级结业成功');
       setCompleteModalVisible(false);
       loadClassDetail();
-    } catch (error: any) {
-      message.error(error.message || '班级结业失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '班级结业失败');
     }
   };
 
@@ -294,23 +291,23 @@ export function Component() {
     try {
       await exportClassStudents(classId);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
   // 更新班级状态
-  const handleUpdateStatus = async (status: string) => {
+  const handleUpdateStatus = async (status: ClassStatus) => {
     if (!classInfo) return;
 
     try {
       await updateClass(classId, {
         ...classInfo,
-        status: status as any,
+        status,
       });
       message.success('状态更新成功');
       loadClassDetail();
-    } catch (error) {
+    } catch {
       message.error('状态更新失败');
     }
   };
@@ -692,9 +689,6 @@ export function Component() {
           >
             <DatePicker style={{ width: '100%' }} placeholder="请选择加入日期" />
           </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <TextArea rows={3} placeholder="请输入备注信息" />
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -723,13 +717,6 @@ export function Component() {
             rules={[{ required: true, message: '请选择退班日期' }]}
           >
             <DatePicker style={{ width: '100%' }} placeholder="请选择退班日期" />
-          </Form.Item>
-          <Form.Item
-            label="退班原因"
-            name="reason"
-            rules={[{ required: true, message: '请输入退班原因' }]}
-          >
-            <TextArea rows={3} placeholder="请输入退班原因" />
           </Form.Item>
         </Form>
       </Modal>

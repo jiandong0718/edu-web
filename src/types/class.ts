@@ -125,7 +125,6 @@ export interface AssignStudentParams {
   classId: number;
   studentIds: number[];
   joinDate: string;
-  remark?: string;
 }
 
 // 学员退班参数
@@ -133,7 +132,6 @@ export interface RemoveStudentParams {
   classId: number;
   studentId: number;
   leaveDate: string;
-  reason?: string;
 }
 
 // 班级升班参数

@@ -100,7 +100,7 @@ export function StudentBatchImport({ open, onCancel, onSuccess }: StudentBatchIm
       setDownloading(true);
       await downloadStudentTemplate();
       message.success('模板下载成功');
-    } catch (error) {
+    } catch {
       message.error('模板下载失败');
     } finally {
       setDownloading(false);
@@ -145,7 +145,11 @@ export function StudentBatchImport({ open, onCancel, onSuccess }: StudentBatchIm
 
     setUploading(true);
     try {
-      const file = fileList[0] as any;
+      const file = fileList[0]?.originFileObj;
+      if (!file) {
+        message.error('文件数据无效');
+        return;
+      }
       const result = await importStudents(file);
       setImportResult(result);
       setCurrentStep(2);
@@ -157,8 +161,8 @@ export function StudentBatchImport({ open, onCancel, onSuccess }: StudentBatchIm
       } else {
         message.warning(`导入完成！成功 ${result.success} 条，失败 ${result.failed} 条`);
       }
-    } catch (error: any) {
-      message.error(error.message || '导入失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '导入失败');
     } finally {
       setUploading(false);
     }

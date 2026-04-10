@@ -7,7 +7,6 @@ import {
   Input,
   Space,
   message,
-  Spin,
   Radio,
   Divider,
   Card,
@@ -78,7 +77,7 @@ const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
       if (defaultTemplate) {
         setPrintData((prev) => ({ ...prev, templateId: defaultTemplate.id }));
       }
-    } catch (error) {
+    } catch {
       message.error('加载打印模板失败');
     }
   };
@@ -98,7 +97,7 @@ const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
       const html = await previewPrint(contractId, printData.templateId);
       setPreviewHtml(html);
       setShowPreview(true);
-    } catch (error) {
+    } catch {
       message.error('预览失败');
     } finally {
       setPreviewLoading(false);
@@ -112,7 +111,7 @@ const ContractPrintModal: React.FC<ContractPrintModalProps> = ({
       message.success('打印成功');
       loadPrintRecords();
       onSuccess?.();
-    } catch (error) {
+    } catch {
       message.error('打印失败');
     } finally {
       setLoading(false);

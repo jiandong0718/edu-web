@@ -1,4 +1,5 @@
-import request from '@/utils/request';
+import { http } from '@/utils/request';
+import type { AxiosResponse } from 'axios';
 
 /**
  * 收款记录
@@ -50,6 +51,12 @@ export interface ReceiptDetail {
   remark?: string;
 }
 
+export interface PaymentPageResult {
+  records?: Payment[];
+  list?: Payment[];
+  total?: number;
+}
+
 /**
  * 分页查询收款记录
  */
@@ -60,28 +67,28 @@ export function getPaymentPage(params: {
   studentId?: number;
   status?: string;
 }) {
-  return request.get('/finance/payment/page', { params });
+  return http.get<PaymentPageResult | { data?: PaymentPageResult }>('/finance/payment/page', { params });
 }
 
 /**
  * 获取收款详情
  */
 export function getPaymentDetail(id: number) {
-  return request.get(`/finance/payment/${id}`);
+  return http.get(`/finance/payment/${id}`);
 }
 
 /**
  * 创建收款记录
  */
 export function createPayment(data: Partial<Payment>) {
-  return request.post('/finance/payment', data);
+  return http.post('/finance/payment', data);
 }
 
 /**
  * 确认收款
  */
 export function confirmPayment(id: number, transactionNo?: string) {
-  return request.put(`/finance/payment/${id}/confirm`, null, {
+  return http.put(`/finance/payment/${id}/confirm`, null, {
     params: { transactionNo },
   });
 }
@@ -90,14 +97,14 @@ export function confirmPayment(id: number, transactionNo?: string) {
  * 获取收据详情
  */
 export function getReceiptDetail(paymentId: number) {
-  return request.get<ReceiptDetail>(`/finance/payment/receipt/${paymentId}`);
+  return http.get<ReceiptDetail | { data?: ReceiptDetail }>(`/finance/payment/receipt/${paymentId}`);
 }
 
 /**
  * 生成收据PDF
  */
 export function generateReceiptPdf(paymentId: number) {
-  return request.post<string>('/finance/payment/receipt/generate', null, {
+  return http.post<string>('/finance/payment/receipt/generate', null, {
     params: { paymentId },
   });
 }
@@ -106,7 +113,7 @@ export function generateReceiptPdf(paymentId: number) {
  * 下载收据PDF
  */
 export function downloadReceiptPdf(paymentId: number) {
-  return request.get(`/finance/payment/receipt/download/${paymentId}`, {
+  return http.get<AxiosResponse<Blob>>(`/finance/payment/receipt/download/${paymentId}`, {
     responseType: 'blob',
   });
 }
@@ -115,21 +122,21 @@ export function downloadReceiptPdf(paymentId: number) {
  * 预览收据
  */
 export function previewReceipt(paymentId: number) {
-  return request.get<string>(`/finance/payment/receipt/preview/${paymentId}`);
+  return http.get<string>(`/finance/payment/receipt/preview/${paymentId}`);
 }
 
 /**
  * 批量生成收据PDF
  */
 export function generateBatchReceiptPdf(paymentIds: number[]) {
-  return request.post<string>('/finance/payment/receipt/batch/generate', paymentIds);
+  return http.post<string>('/finance/payment/receipt/batch/generate', paymentIds);
 }
 
 /**
  * 批量下载收据PDF
  */
 export function downloadBatchReceiptPdf(paymentIds: number[]) {
-  return request.post('/finance/payment/receipt/batch/download', paymentIds, {
+  return http.post<AxiosResponse<Blob>>('/finance/payment/receipt/batch/download', paymentIds, {
     responseType: 'blob',
   });
 }

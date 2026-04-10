@@ -104,8 +104,8 @@ function Component() {
       const res = await getLeadList(queryParams);
       setDataSource(res.list);
       setTotal(res.total);
-    } catch (error: any) {
-      message.error(error.message || '加载失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ function Component() {
     try {
       const res = await getAdvisorList();
       setAdvisorList(res);
-    } catch (error: any) {
+    } catch {
       message.error('加载顾问列表失败');
     }
   };
@@ -130,7 +130,7 @@ function Component() {
   }, []);
 
   // 搜索
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: Partial<LeadQueryParams>) => {
     setQueryParams({
       ...queryParams,
       page: 1,
@@ -152,8 +152,8 @@ function Component() {
       await deleteLead(id);
       message.success('删除成功');
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -176,8 +176,8 @@ function Component() {
       setSelectedRowKeys([]);
       form.resetFields();
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '分配失败');
     }
   };
 
@@ -200,8 +200,8 @@ function Component() {
       setSelectedRowKeys([]);
       autoAssignForm.resetFields();
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '自动分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '自动分配失败');
     }
   };
 
@@ -293,7 +293,7 @@ function Component() {
       key: 'action',
       width: 150,
       fixed: 'right',
-      render: (_: any, record: Lead) => (
+      render: (_: unknown, record: Lead) => (
         <Space size="small">
           <Button type="link" size="small">
             详情

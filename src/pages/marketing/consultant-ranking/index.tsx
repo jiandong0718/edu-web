@@ -18,16 +18,16 @@ import {
   ReloadOutlined,
   UserOutlined,
   RiseOutlined,
-  PhoneOutlined,
   CheckCircleOutlined,
-  DollarOutlined,
   CrownOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { getConsultantRanking } from '@/api/marketing';
+import { getCampusList } from '@/api/campus';
 import type { ConsultantPerformance, ConsultantQueryParams } from '@/types/marketing';
+import type { Campus } from '@/components/CampusSwitch';
 
 const { RangePicker } = DatePicker;
 
@@ -183,6 +183,7 @@ function ConsultantRankingPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ConsultantPerformance[]>([]);
   const [total, setTotal] = useState(0);
+  const [campusOptions, setCampusOptions] = useState<Campus[]>([]);
   const [queryParams, setQueryParams] = useState<ConsultantQueryParams>({
     startDate: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
     endDate: dayjs().format('YYYY-MM-DD'),
@@ -199,8 +200,8 @@ function ConsultantRankingPage() {
       const res = await getConsultantRanking(queryParams);
       setData(res.rankings);
       setTotal(res.total);
-    } catch (error: any) {
-      message.error(error.message || '加载失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -209,6 +210,10 @@ function ConsultantRankingPage() {
   useEffect(() => {
     loadData();
   }, [queryParams]);
+
+  useEffect(() => {
+    getCampusList().then(res => setCampusOptions(res.list)).catch(() => message.error('加载校区列表失败'));
+  }, []);
 
   // 处理日期范围变化
   const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
@@ -247,7 +252,7 @@ function ConsultantRankingPage() {
       key: 'rank',
       width: 80,
       align: 'center',
-      render: (_: any, __: any, index: number) => {
+      render: (_: unknown, __: unknown, index: number) => {
         const rank = (queryParams.page! - 1) * queryParams.pageSize! + index + 1;
         if (rank <= 3) {
           const colors = ['#ffd700', '#c0c0c0', '#cd7f32'];
@@ -420,9 +425,9 @@ function ConsultantRankingPage() {
               value={queryParams.campusId}
               onChange={handleCampusChange}
             >
-              <Select.Option value={1}>总部校区</Select.Option>
-              <Select.Option value={2}>分校区A</Select.Option>
-              <Select.Option value={3}>分校区B</Select.Option>
+              {campusOptions.map(c => (
+                <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+              ))}
             </Select>
             <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>排序:</span>
             <Select

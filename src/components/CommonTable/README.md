@@ -46,7 +46,7 @@ import { CommonTable } from '@/components/CommonTable';
 
 ## 示例
 
-查看 `/src/pages/examples/TableExample.tsx` 获取完整示例代码。
+查看项目根目录的 `COMMON_TABLE_GUIDE.md` 和 `COMMON_TABLE_QUICKSTART.md` 获取使用示例。
 
 ## 依赖
 

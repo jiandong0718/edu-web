@@ -10,6 +10,13 @@ interface ReceiptPrintProps {
   onClose: () => void;
 }
 
+const normalizeReceiptDetail = (payload: ReceiptDetail | { data?: ReceiptDetail }): ReceiptDetail | null => {
+  if ('data' in payload && payload.data) {
+    return payload.data;
+  }
+  return 'receiptNo' in payload ? payload : null;
+};
+
 const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ visible, paymentId, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptDetail | null>(null);
@@ -29,7 +36,7 @@ const ReceiptPrint: React.FC<ReceiptPrintProps> = ({ visible, paymentId, onClose
     setLoading(true);
     try {
       const response = await getReceiptDetail(paymentId);
-      setReceiptData(response.data);
+      setReceiptData(normalizeReceiptDetail(response));
     } catch (error) {
       message.error('加载收据数据失败');
       console.error(error);

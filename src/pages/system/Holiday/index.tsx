@@ -19,6 +19,7 @@ import {
   Popconfirm,
   Upload,
 } from 'antd';
+import type { BadgeProps } from 'antd';
 import {
   PlusOutlined,
   SearchOutlined,
@@ -31,6 +32,7 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { TablePaginationConfig } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { CommonTable } from '@/components/CommonTable';
@@ -52,6 +54,19 @@ import {
 } from '@/api/holiday';
 
 const { RangePicker } = DatePicker;
+
+const normalizePageResult = <T,>(
+  payload: { list?: T[]; total?: number } | { data?: { list?: T[]; total?: number } } | null | undefined
+) => {
+  const result = (
+    payload && typeof payload === 'object' && 'data' in payload && payload.data
+      ? payload.data
+      : payload
+  ) as { list?: T[]; total?: number } | null | undefined;
+  const list = Array.isArray(result?.list) ? result.list : [];
+  const total = typeof result?.total === 'number' ? result.total : list.length;
+  return { list, total };
+};
 
 // 节假日类型选项
 const TYPE_OPTIONS = [
@@ -159,19 +174,20 @@ export default function HolidayManagement() {
     setLoading(true);
     try {
       const response = await getHolidayPage(queryParams);
-      setHolidays(response.data.list);
-      setTotal(response.data.total);
+      const pageResult = normalizePageResult<Holiday>(response);
+      setHolidays(pageResult.list);
+      setTotal(pageResult.total);
 
       // 计算统计数据
       const stats: HolidayStatistics = {
-        total: response.data.list.length,
-        legalCount: response.data.list.filter((h) => h.type === 'legal').length,
-        compensatoryCount: response.data.list.filter((h) => h.type === 'compensatory').length,
-        companyCount: response.data.list.filter((h) => h.type === 'company').length,
-        totalDays: response.data.list.reduce((sum, h) => sum + h.days, 0),
+        total: pageResult.list.length,
+        legalCount: pageResult.list.filter((h) => h.type === 'legal').length,
+        compensatoryCount: pageResult.list.filter((h) => h.type === 'compensatory').length,
+        companyCount: pageResult.list.filter((h) => h.type === 'company').length,
+        totalDays: pageResult.list.reduce((sum, h) => sum + h.days, 0),
       };
       setStatistics(stats);
-    } catch (error) {
+    } catch {
       message.error('获取节假日列表失败');
     } finally {
       setLoading(false);
@@ -346,7 +362,10 @@ export default function HolidayManagement() {
   };
 
   // 处理筛选
-  const handleFilter = (key: string, value: any) => {
+  const handleFilter = (
+    key: keyof HolidayQueryParams,
+    value: HolidayQueryParams[keyof HolidayQueryParams]
+  ) => {
     setQueryParams({ ...queryParams, [key]: value, page: 1 });
   };
 
@@ -377,7 +396,7 @@ export default function HolidayManagement() {
       await deleteHoliday(id);
       message.success('删除成功');
       fetchHolidays();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -407,7 +426,7 @@ export default function HolidayManagement() {
 
       setModalVisible(false);
       fetchHolidays();
-    } catch (error) {
+    } catch {
       // Error handled by form validation UI
     }
   };
@@ -422,7 +441,7 @@ export default function HolidayManagement() {
     try {
       await exportHolidayList(queryParams);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
@@ -434,14 +453,14 @@ export default function HolidayManagement() {
       message.success('导入成功');
       setImportModalVisible(false);
       fetchHolidays();
-    } catch (error) {
+    } catch {
       message.error('导入失败');
     }
     return false; // 阻止自动上传
   };
 
   // 处理分页变化
-  const handleTableChange = (pagination: any) => {
+  const handleTableChange = (pagination: TablePaginationConfig) => {
     setQueryParams({
       ...queryParams,
       page: pagination.current,
@@ -461,7 +480,7 @@ export default function HolidayManagement() {
       (h) => dateStr >= h.startDate && dateStr <= h.endDate && h.status === 'enabled'
     );
     if (holiday) {
-      const typeMap = {
+      const typeMap: Record<Holiday['type'], BadgeProps['status']> = {
         legal: 'success',
         compensatory: 'warning',
         company: 'processing',
@@ -478,7 +497,7 @@ export default function HolidayManagement() {
         {listData.map((item, index) => (
           <li key={index}>
             <Badge
-              status={item.type as any}
+              status={item.type}
               text={item.content}
               style={{ fontSize: 11 }}
             />

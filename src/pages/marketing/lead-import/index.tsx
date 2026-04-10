@@ -94,7 +94,7 @@ export function Component() {
     try {
       await downloadLeadTemplate();
       message.success('模板下载成功');
-    } catch (error) {
+    } catch {
       message.error('模板下载失败');
     }
   };
@@ -137,7 +137,7 @@ export function Component() {
 
     setUploading(true);
     try {
-      const file = fileList[0] as any;
+      const file = (fileList[0].originFileObj ?? fileList[0]) as File;
       const result = await importLeads(file);
       setImportResult(result);
       setCurrentStep(2);
@@ -148,8 +148,8 @@ export function Component() {
           `导入完成！成功 ${result.success} 条，失败 ${result.failed} 条`
         );
       }
-    } catch (error: any) {
-      message.error(error.message || '导入失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '导入失败');
     } finally {
       setUploading(false);
     }

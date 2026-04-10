@@ -276,7 +276,7 @@ const Login: React.FC = () => {
       setUserInfo(response.userInfo);
       message.success('登录成功');
       navigate('/');
-    } catch (error) {
+    } catch {
       message.error('登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);

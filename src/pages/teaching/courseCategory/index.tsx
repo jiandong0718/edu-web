@@ -165,7 +165,7 @@ const styles = {
 };
 
 export default function CourseCategoryPage() {
-  const [_loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [categories, setCategories] = useState<CourseCategory[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<CourseCategory[]>([]);
   const [searchText, setSearchText] = useState('');
@@ -184,8 +184,8 @@ export default function CourseCategoryPage() {
       // 默认展开所有节点
       const allKeys = getAllKeys(response || []);
       setExpandedKeys(allKeys);
-    } catch (error: any) {
-      message.error(error.message || '加载分类失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加载分类失败');
     } finally {
       setLoading(false);
     }
@@ -378,8 +378,8 @@ export default function CourseCategoryPage() {
       await deleteCourseCategory(id);
       message.success('删除成功');
       loadCategories();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -389,8 +389,8 @@ export default function CourseCategoryPage() {
       await updateCourseCategoryStatus(id, checked ? 'active' : 'inactive');
       message.success('状态更新成功');
       loadCategories();
-    } catch (error: any) {
-      message.error(error.message || '状态更新失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '状态更新失败');
     }
   };
 
@@ -413,12 +413,12 @@ export default function CourseCategoryPage() {
 
       setModalVisible(false);
       loadCategories();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error instanceof Object && 'errorFields' in error) {
         // 表单验证错误
         return;
       }
-      message.error(error.message || '操作失败');
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 

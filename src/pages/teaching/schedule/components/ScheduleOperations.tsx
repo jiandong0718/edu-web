@@ -8,7 +8,6 @@ import {
   Form,
   Select,
   DatePicker,
-  TimePicker,
   Input,
   message,
   Tag,
@@ -38,8 +37,6 @@ import {
 } from '@/api/schedule';
 import { getTeacherList } from '@/api/teacher';
 import { getClassroomList } from '@/api/classroom';
-import type { Teacher } from '@/types/teacher';
-import type { Classroom } from '@/types/classroom';
 
 const { TextArea } = Input;
 
@@ -80,39 +77,6 @@ const statusConfig = {
   rescheduled: { color: '#ffaa00', text: '已调课' },
 };
 
-const normalizeScheduleList = (response: unknown): Schedule[] => {
-  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
-const normalizeTeacherList = (response: unknown): Teacher[] => {
-  const raw = response as { list?: Teacher[]; data?: { list?: Teacher[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
-const normalizeClassroomList = (response: unknown): Classroom[] => {
-  const raw = response as { list?: Classroom[]; data?: { list?: Classroom[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
 function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
   const [loading, setLoading] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -136,8 +100,8 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
         getClassroomList({ page: 1, pageSize: 200 }),
       ]);
 
-      const teachers = normalizeTeacherList(teachersResponse);
-      const classrooms = normalizeClassroomList(classroomsResponse);
+      const teachers = teachersResponse.list;
+      const classrooms = classroomsResponse.data.list;
 
       setTeacherOptions(
         teachers.map((teacher) => ({ label: teacher.name, value: teacher.id }))
@@ -154,12 +118,8 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const response = await getScheduleList({
-        pageNum: 1,
-        pageSize: 200,
-        status: 'scheduled',
-      });
-      setSchedules(normalizeScheduleList(response));
+      const response = await getScheduleList({ status: 'scheduled' });
+      setSchedules(response.list);
     } catch {
       setSchedules([]);
     } finally {
@@ -208,8 +168,8 @@ function ScheduleOperations({ onSuccess }: ScheduleOperationsProps) {
         setConflicts([]);
         message.success('无冲突，可以提交');
       }
-    } catch (error) {
-      // Conflict check failed silently
+    } catch {
+      message.error('冲突检测失败，请重试');
     }
   };
 

@@ -10,8 +10,6 @@ import BatchScheduleForm from './components/BatchScheduleForm';
 import ScheduleOperations from './components/ScheduleOperations';
 import ScheduleCalendar from './components/ScheduleCalendar';
 
-const { TabPane } = Tabs;
-
 // 样式定义
 const styles = {
   pageHeader: {

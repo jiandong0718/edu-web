@@ -10,6 +10,10 @@ import {
   Tooltip,
   message,
   Avatar,
+  Modal,
+  Form,
+  InputNumber,
+  Select,
 } from 'antd';
 import {
   PlusOutlined,
@@ -29,12 +33,28 @@ import BatchPrintModal from '@/components/BatchPrintModal';
 import {
   getContractList,
   exportContractList,
+  createContract,
 } from '@/api/contract';
-import type { Contract, ContractQueryParams } from '@/types/contract';
+import type { Contract, ContractQueryParams, ContractFormData } from '@/types/contract';
 
 interface ContractRow extends Contract {
   totalHours?: number;
   remainingHours?: number;
+}
+
+interface ContractFormValues {
+  studentId: number;
+  campusId: number;
+  type: ContractFormData['type'];
+  signDate: string;
+  startDate: string;
+  endDate: string;
+  salesPersonId: number;
+  courseId: number;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  remark?: string;
 }
 
 const styles = {
@@ -144,6 +164,11 @@ function ContractList() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
 
+  // 新增合同表单
+  const [formVisible, setFormVisible] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [form] = Form.useForm();
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -207,6 +232,44 @@ function ContractList() {
       return;
     }
     setBatchPrintModalVisible(true);
+  };
+
+  const handleAdd = () => {
+    form.resetFields();
+    form.setFieldsValue({ type: 'regular', quantity: 1, discountAmount: 0 });
+    setFormVisible(true);
+  };
+
+  const handleFormSubmit = async () => {
+    try {
+      const values = (await form.validateFields()) as ContractFormValues;
+      setFormLoading(true);
+      const payload: ContractFormData = {
+        studentId: values.studentId,
+        campusId: values.campusId,
+        type: values.type,
+        signDate: values.signDate,
+        startDate: values.startDate,
+        endDate: values.endDate,
+        salesPersonId: values.salesPersonId,
+        items: [{
+          courseId: values.courseId,
+          quantity: values.quantity,
+          unitPrice: values.unitPrice,
+          discountAmount: values.discountAmount || 0,
+        }],
+        remark: values.remark,
+      };
+      await createContract(payload);
+      message.success('创建合同成功');
+      setFormVisible(false);
+      void loadData();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      message.error('创建合同失败');
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const handleTableChange = (pager: TablePaginationConfig) => {
@@ -395,7 +458,7 @@ function ContractList() {
             type="primary"
             icon={<PlusOutlined />}
             style={styles.actionButton}
-            onClick={() => message.info('请先在后续版本接入新增合同表单')}
+            onClick={handleAdd}
           >
             新增合同
           </Button>
@@ -494,6 +557,62 @@ function ContractList() {
           setSelectedRows([]);
         }}
       />
+
+      {/* 新增合同弹窗 */}
+      <Modal
+        title="新增合同"
+        open={formVisible}
+        onCancel={() => setFormVisible(false)}
+        onOk={handleFormSubmit}
+        confirmLoading={formLoading}
+        okText="确定"
+        cancelText="取消"
+        width={600}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item label="学生ID" name="studentId" rules={[{ required: true, message: '请输入学生ID' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入学生ID" />
+          </Form.Item>
+          <Form.Item label="校区ID" name="campusId" rules={[{ required: true, message: '请输入校区ID' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入校区ID" />
+          </Form.Item>
+          <Form.Item label="合同类型" name="type" rules={[{ required: true, message: '请选择合同类型' }]}>
+            <Select placeholder="请选择合同类型">
+              <Select.Option value="regular">常规合同</Select.Option>
+              <Select.Option value="trial">试听合同</Select.Option>
+              <Select.Option value="package">套餐合同</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item label="签约日期" name="signDate" rules={[{ required: true, message: '请输入签约日期' }]}>
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="开始日期" name="startDate" rules={[{ required: true, message: '请输入开始日期' }]}>
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="结束日期" name="endDate" rules={[{ required: true, message: '请输入结束日期' }]}>
+            <Input placeholder="YYYY-MM-DD" />
+          </Form.Item>
+          <Form.Item label="销售人员ID" name="salesPersonId" rules={[{ required: true, message: '请输入销售人员ID' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入销售人员ID" />
+          </Form.Item>
+          <Form.Item label="课程ID" name="courseId" rules={[{ required: true, message: '请输入课程ID' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入课程ID" />
+          </Form.Item>
+          <Form.Item label="购买数量" name="quantity" rules={[{ required: true, message: '请输入购买数量' }]}>
+            <InputNumber min={1} style={{ width: '100%' }} placeholder="请输入购买数量" />
+          </Form.Item>
+          <Form.Item label="课程单价" name="unitPrice" rules={[{ required: true, message: '请输入课程单价' }]}>
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入课程单价" />
+          </Form.Item>
+          <Form.Item label="优惠金额" name="discountAmount">
+            <InputNumber min={0} style={{ width: '100%' }} placeholder="请输入优惠金额" />
+          </Form.Item>
+          <Form.Item label="备注" name="remark">
+            <Input.TextArea rows={3} placeholder="请输入备注" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
     </div>
   );
 }

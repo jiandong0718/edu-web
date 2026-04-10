@@ -1,5 +1,20 @@
 import { http } from '@/utils/request';
-import type { EnrollmentData, RevenueData, TeachingData } from '@/types/dashboard';
+import type {
+  EnrollmentData,
+  RevenueData,
+  TeachingData,
+  TeachingOverview,
+  AttendanceRateItem,
+  ClassStatsItem,
+  TeacherStatsItem,
+  CourseConsumptionItem,
+  ClassStatusDistribution,
+  RevenueOverview,
+  RevenueTrendItem,
+  PaymentMethodItem,
+  ArrearsItem,
+  CourseRevenueItem,
+} from '@/types/dashboard';
 
 // 获取招生数据看板
 export const getEnrollmentDashboard = () => {
@@ -20,7 +35,7 @@ export const getTeachingDashboard = () => {
 
 // 获取教学数据概览
 export const getTeachingOverview = (campusId?: number) => {
-  return http.get('/system/dashboard/teaching/overview', { params: { campusId } });
+  return http.get<TeachingOverview>('/system/dashboard/teaching/overview', { params: { campusId } });
 };
 
 // 获取考勤率趋势
@@ -29,7 +44,7 @@ export const getAttendanceRateTrend = (params?: {
   startDate?: string;
   endDate?: string;
 }) => {
-  return http.get('/system/dashboard/teaching/attendance-rate', { params });
+  return http.get<AttendanceRateItem[]>('/system/dashboard/teaching/attendance-rate', { params });
 };
 
 // 获取班级统计
@@ -37,12 +52,12 @@ export const getClassStats = (params?: {
   campusId?: number;
   status?: string;
 }) => {
-  return http.get('/system/dashboard/teaching/class-stats', { params });
+  return http.get<ClassStatsItem[]>('/system/dashboard/teaching/class-stats', { params });
 };
 
 // 获取教师统计
 export const getTeacherStats = (campusId?: number) => {
-  return http.get('/system/dashboard/teaching/teacher-stats', { params: { campusId } });
+  return http.get<TeacherStatsItem[]>('/system/dashboard/teaching/teacher-stats', { params: { campusId } });
 };
 
 // 获取课程消耗统计
@@ -50,12 +65,12 @@ export const getCourseConsumption = (params?: {
   campusId?: number;
   limit?: number;
 }) => {
-  return http.get('/system/dashboard/teaching/course-consumption', { params });
+  return http.get<CourseConsumptionItem[]>('/system/dashboard/teaching/course-consumption', { params });
 };
 
 // 获取班级状态分布
 export const getClassStatusDistribution = (campusId?: number) => {
-  return http.get('/system/dashboard/teaching/class-status-distribution', { params: { campusId } });
+  return http.get<ClassStatusDistribution[]>('/system/dashboard/teaching/class-status-distribution', { params: { campusId } });
 };
 
 // ========== 新版招生数据看板 API ==========
@@ -109,7 +124,7 @@ export const getEnrollmentAdvisorRanking = (params?: EnrollmentAdvisorParams) =>
 
 // 获取营收数据概览
 export const getRevenueOverview = (campusId?: number) => {
-  return http.get('/system/dashboard/revenue/overview', { params: { campusId } });
+  return http.get<RevenueOverview>('/system/dashboard/revenue/overview', { params: { campusId } });
 };
 
 // 获取营收趋势
@@ -117,7 +132,7 @@ export const getRevenueTrend = (params?: {
   campusId?: number;
   days?: number;
 }) => {
-  return http.get('/system/dashboard/revenue/trend', { params });
+  return http.get<RevenueTrendItem[]>('/system/dashboard/revenue/trend', { params });
 };
 
 // 获取收款方式分布
@@ -126,7 +141,7 @@ export const getPaymentMethodDistribution = (params?: {
   startDate?: string;
   endDate?: string;
 }) => {
-  return http.get('/system/dashboard/revenue/payment-method', { params });
+  return http.get<PaymentMethodItem[]>('/system/dashboard/revenue/payment-method', { params });
 };
 
 // 获取欠费统计
@@ -134,7 +149,7 @@ export const getArrearsList = (params?: {
   campusId?: number;
   limit?: number;
 }) => {
-  return http.get('/system/dashboard/revenue/arrears', { params });
+  return http.get<ArrearsItem[]>('/system/dashboard/revenue/arrears', { params });
 };
 
 // 获取课程营收排行
@@ -144,5 +159,5 @@ export const getCourseRevenueRanking = (params?: {
   endDate?: string;
   limit?: number;
 }) => {
-  return http.get('/system/dashboard/revenue/course-revenue', { params });
+  return http.get<CourseRevenueItem[]>('/system/dashboard/revenue/course-revenue', { params });
 };

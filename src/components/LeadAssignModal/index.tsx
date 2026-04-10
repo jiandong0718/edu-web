@@ -13,8 +13,8 @@ import { UserOutlined } from '@ant-design/icons';
 import { batchAssignLeads, autoAssignLeads } from '@/api/lead';
 import { getAdvisorList } from '@/api/user';
 import type { User } from '@/api/user';
-import { getCampusList } from '@/api/system';
-import type { Campus } from '@/api/system';
+import { getCampusList } from '@/api/campus';
+import type { Campus } from '@/components/CampusSwitch';
 
 interface LeadAssignModalProps {
   visible: boolean;
@@ -43,7 +43,7 @@ export default function LeadAssignModal({
       form.resetFields();
       setAssignMode('manual');
       loadAdvisors();
-      getCampusList().then(setCampusList).catch(() => {});
+      getCampusList().then(res => setCampusList(res.list)).catch(() => {});
     }
   }, [visible, form]);
 
@@ -52,7 +52,7 @@ export default function LeadAssignModal({
     try {
       const result = await getAdvisorList();
       setAdvisors(result);
-    } catch (error) {
+    } catch {
       message.error('加载顾问列表失败');
     }
   };
@@ -74,12 +74,12 @@ export default function LeadAssignModal({
       }
 
       onSuccess();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error) {
+      if (error instanceof Object && 'errorFields' in error) {
         // 表单验证错误
         return;
       }
-      message.error(error.message || '分配失败');
+      message.error(error instanceof Error ? error.message : '分配失败');
     } finally {
       setLoading(false);
     }

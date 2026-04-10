@@ -5,13 +5,10 @@ import {
   Space,
   Button,
   Calendar,
-  Badge,
   Modal,
   Descriptions,
   Tag,
   Radio,
-  Row,
-  Col,
   Empty,
 } from 'antd';
 import {
@@ -28,9 +25,6 @@ import { getScheduleList } from '@/api/schedule';
 import { getClassList } from '@/api/class';
 import { getTeacherList } from '@/api/teacher';
 import { getClassroomList } from '@/api/classroom';
-import type { Class } from '@/types/class';
-import type { Teacher } from '@/types/teacher';
-import type { Classroom } from '@/types/classroom';
 
 type ViewType = 'class' | 'teacher' | 'classroom';
 type CalendarMode = 'month' | 'week';
@@ -123,50 +117,6 @@ const statusConfig = {
   rescheduled: { color: '#ffaa00', text: '已调课' },
 };
 
-const normalizeScheduleList = (response: unknown): Schedule[] => {
-  const raw = response as { list?: Schedule[]; data?: { list?: Schedule[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
-const normalizeClassList = (response: unknown): Class[] => {
-  const raw = response as { list?: Class[]; data?: { list?: Class[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
-const normalizeTeacherList = (response: unknown): Teacher[] => {
-  const raw = response as { list?: Teacher[]; data?: { list?: Teacher[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
-const normalizeClassroomList = (response: unknown): Classroom[] => {
-  const raw = response as { list?: Classroom[]; data?: { list?: Classroom[] } } | undefined;
-  if (Array.isArray(raw?.list)) {
-    return raw.list;
-  }
-  if (raw?.data && Array.isArray(raw.data.list)) {
-    return raw.data.list;
-  }
-  return [];
-};
-
 function ScheduleCalendar() {
   const [viewType, setViewType] = useState<ViewType>('class');
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
@@ -198,9 +148,9 @@ function ScheduleCalendar() {
         getClassroomList({ page: 1, pageSize: 500 }),
       ]);
 
-      const classes = normalizeClassList(classesResponse);
-      const teachers = normalizeTeacherList(teachersResponse);
-      const classrooms = normalizeClassroomList(classroomsResponse);
+      const classes = classesResponse.list;
+      const teachers = teachersResponse.list;
+      const classrooms = classroomsResponse.data.list;
 
       setClassOptions(classes.map((item) => ({ label: item.name, value: item.id })));
       setTeacherOptions(teachers.map((item) => ({ label: item.name, value: item.id })));
@@ -217,23 +167,35 @@ function ScheduleCalendar() {
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const params: Record<string, unknown> = {
-        pageNum: 1,
-        pageSize: 500,
+      const params = {
         startDate: selectedDate.startOf('month').format('YYYY-MM-DD'),
         endDate: selectedDate.endOf('month').format('YYYY-MM-DD'),
-      };
+      } as const;
 
       if (viewType === 'class' && selectedId) {
-        params.classId = selectedId;
+        const response = await getScheduleList({
+          ...params,
+          classId: selectedId,
+        });
+        setSchedules(response.list);
+        return;
       } else if (viewType === 'teacher' && selectedId) {
-        params.teacherId = selectedId;
+        const response = await getScheduleList({
+          ...params,
+          teacherId: selectedId,
+        });
+        setSchedules(response.list);
+        return;
       } else if (viewType === 'classroom' && selectedId) {
-        params.classroomId = selectedId;
+        const response = await getScheduleList({
+          ...params,
+          classroomId: selectedId,
+        });
+        setSchedules(response.list);
+        return;
       }
-
       const response = await getScheduleList(params);
-      setSchedules(normalizeScheduleList(response));
+      setSchedules(response.list);
     } catch {
       setSchedules([]);
     } finally {

@@ -5,7 +5,7 @@ import type { ExportConfig } from './types';
  * 导出Excel工具函数
  * 注意：需要安装 xlsx 库: npm install xlsx
  */
-export async function exportToExcel<T extends Record<string, any>>(
+export async function exportToExcel<T extends object>(
   data: T[],
   columns: ColumnType<T>[],
   config?: ExportConfig
@@ -30,7 +30,7 @@ export async function exportToExcel<T extends Record<string, any>>(
     const rows = data.map((record) => {
       return filteredColumns.map((col) => {
         const dataIndex = col.dataIndex as string;
-        let value = record[dataIndex];
+        let value = (record as Record<string, unknown>)[dataIndex];
 
         // 如果有自定义render，尝试获取渲染后的值
         if (col.render && typeof value !== 'object') {
@@ -104,21 +104,19 @@ export function deepClone<T>(obj: T): T {
 /**
  * 防抖函数
  */
-export function debounce<T extends (...args: any[]) => any>(
-  func: T,
+export function debounce<TArgs extends unknown[]>(
+  func: (...args: TArgs) => void,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
-  return function (this: any, ...args: Parameters<T>) {
-    const context = this;
-
+  return (...args: TArgs) => {
     if (timeout) {
       clearTimeout(timeout);
     }
 
     timeout = setTimeout(() => {
-      func.apply(context, args);
+      func(...args);
     }, wait);
   };
 }
@@ -126,15 +124,14 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * 节流函数
  */
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
+export function throttle<TArgs extends unknown[]>(
+  func: (...args: TArgs) => void,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let previous = 0;
 
-  return function (this: any, ...args: Parameters<T>) {
-    const context = this;
+  return (...args: TArgs) => {
     const now = Date.now();
 
     if (now - previous > wait) {
@@ -142,11 +139,11 @@ export function throttle<T extends (...args: any[]) => any>(
         clearTimeout(timeout);
         timeout = null;
       }
-      func.apply(context, args);
+      func(...args);
       previous = now;
     } else if (!timeout) {
       timeout = setTimeout(() => {
-        func.apply(context, args);
+        func(...args);
         previous = Date.now();
         timeout = null;
       }, wait);

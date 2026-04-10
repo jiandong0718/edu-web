@@ -14,10 +14,7 @@ import {
   TeamOutlined,
   DollarOutlined,
   RiseOutlined,
-  FallOutlined,
   PhoneOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   BookOutlined,
   TrophyOutlined,
 } from '@ant-design/icons';
@@ -46,6 +43,19 @@ const valueStyle = {
   color: '#00d4ff',
   fontSize: 28,
   fontWeight: 700,
+};
+
+const buildPieSegments = (values: number[]) => {
+  let angle = -90;
+  return values.map((value) => {
+    const startAngle = angle;
+    angle += value;
+    return {
+      startAngle,
+      endAngle: angle,
+      largeArc: value > 180 ? 1 : 0,
+    };
+  });
 };
 
 // 简单的折线图组件
@@ -111,7 +121,9 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
   if (!data || data.length === 0) return null;
 
   const total = data.reduce((sum, d) => sum + d.value, 0);
-  let currentAngle = -90;
+  const segments = buildPieSegments(
+    data.map((item) => (item.value / total) * 360)
+  );
 
   const colors = ['#00d4ff', '#0099ff', '#00ffaa', '#ff6b9d', '#ffd700'];
 
@@ -119,11 +131,9 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
     <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
       <svg width="120" height="120" viewBox="0 0 120 120">
         {data.map((d, i) => {
-          const percentage = d.value / total;
-          const angle = percentage * 360;
-          const startAngle = currentAngle;
-          const endAngle = currentAngle + angle;
-          currentAngle = endAngle;
+          const segment = segments[i];
+          const startAngle = segment.startAngle;
+          const endAngle = segment.endAngle;
 
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = (endAngle * Math.PI) / 180;
@@ -133,12 +143,10 @@ const PieChart = ({ data }: { data: { name: string; value: number }[] }) => {
           const x2 = 60 + 50 * Math.cos(endRad);
           const y2 = 60 + 50 * Math.sin(endRad);
 
-          const largeArc = angle > 180 ? 1 : 0;
-
           return (
             <path
               key={i}
-              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`}
+              d={`M 60 60 L ${x1} ${y1} A 50 50 0 ${segment.largeArc} 1 ${x2} ${y2} Z`}
               fill={colors[i % colors.length]}
               opacity={0.8}
             />
@@ -219,7 +227,7 @@ const EnrollmentDashboard = () => {
     try {
       const result = await getEnrollmentDashboard();
       setData(result.data || result);
-    } catch (error) {
+    } catch {
       message.error('获取招生数据失败');
     } finally {
       setLoading(false);
@@ -376,7 +384,7 @@ const RevenueDashboard = () => {
     try {
       const result = await getRevenueDashboard();
       setData(result.data || result);
-    } catch (error) {
+    } catch {
       message.error('获取营收数据失败');
     } finally {
       setLoading(false);
@@ -531,7 +539,7 @@ const TeachingDashboard = () => {
     try {
       const result = await getTeachingDashboard();
       setData(result.data || result);
-    } catch (error) {
+    } catch {
       message.error('获取教学数据失败');
     } finally {
       setLoading(false);

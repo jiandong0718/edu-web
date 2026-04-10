@@ -22,7 +22,6 @@ import {
 import {
   submitApproval,
   processApproval,
-  cancelApproval,
   getApprovalHistory,
   getApprovalFlow,
 } from '@/api/contract';
@@ -80,7 +79,7 @@ const ContractApprovalModal: React.FC<ContractApprovalModalProps> = ({
     try {
       const data = await getApprovalHistory(contractId);
       setApprovalHistory(data);
-    } catch (error) {
+    } catch {
       message.error('加载审批历史失败');
     }
   };
@@ -89,7 +88,7 @@ const ContractApprovalModal: React.FC<ContractApprovalModalProps> = ({
     try {
       const data = await getApprovalFlow(id);
       setApprovalFlow(data);
-    } catch (error) {
+    } catch {
       message.error('加载审批流程失败');
     }
   };
@@ -106,7 +105,7 @@ const ContractApprovalModal: React.FC<ContractApprovalModalProps> = ({
       message.success('提交审批成功');
       onSuccess?.();
       onClose();
-    } catch (error) {
+    } catch {
       message.error('提交审批失败');
     } finally {
       setLoading(false);
@@ -120,7 +119,7 @@ const ContractApprovalModal: React.FC<ContractApprovalModalProps> = ({
       message.success('审批处理成功');
       onSuccess?.();
       onClose();
-    } catch (error) {
+    } catch {
       message.error('审批处理失败');
     } finally {
       setLoading(false);

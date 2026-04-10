@@ -10,7 +10,6 @@ import {
   Empty,
   Spin,
   message as antMessage,
-  Modal,
   Tooltip,
   Popconfirm,
 } from 'antd';
@@ -100,7 +99,7 @@ const MessageCenter: React.FC = () => {
       const response = await getMessagePage(params);
       setMessages(response.list);
       setTotal(response.total);
-    } catch (error) {
+    } catch {
       antMessage.error('加载消息列表失败');
     } finally {
       setLoading(false);
@@ -137,8 +136,8 @@ const MessageCenter: React.FC = () => {
         setMessages(messages.map(m =>
           m.id === msg.id ? { ...m, status: 'read' as const } : m
         ));
-      } catch (error) {
-        // Mark-read failed silently
+      } catch {
+        antMessage.error('标记已读失败');
       }
     }
   };
@@ -155,7 +154,7 @@ const MessageCenter: React.FC = () => {
       await deleteMessage(id);
       antMessage.success('删除成功');
       loadMessages();
-    } catch (error) {
+    } catch {
       antMessage.error('删除消息失败');
     }
   };
@@ -166,7 +165,7 @@ const MessageCenter: React.FC = () => {
       await markAllRead();
       antMessage.success('已全部标记为已读');
       loadMessages();
-    } catch (error) {
+    } catch {
       antMessage.error('标记已读失败');
     }
   };
@@ -177,7 +176,7 @@ const MessageCenter: React.FC = () => {
       await deleteAllRead();
       antMessage.success('已删除所有已读消息');
       loadMessages();
-    } catch (error) {
+    } catch {
       antMessage.error('删除失败');
     }
   };

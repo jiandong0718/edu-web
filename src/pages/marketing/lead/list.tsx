@@ -11,7 +11,6 @@ import {
   message,
   Tag,
   Popconfirm,
-  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,6 +24,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
 import { getLeadList, batchAssignLeads, autoAssignLeads, deleteLead } from '@/api/lead';
 import { getAdvisorList } from '@/api/user';
+import { getCampusList } from '@/api/campus';
 import type { Lead, LeadQueryParams } from '@/types/lead';
 import type { User } from '@/api/user';
 
@@ -92,6 +92,16 @@ export function Component() {
   const [advisorList, setAdvisorList] = useState<User[]>([]);
   const [form] = Form.useForm();
   const [autoAssignForm] = Form.useForm();
+  const [campusOptions, setCampusOptions] = useState<{ label: string; value: number }[]>([]);
+
+  // 加载校区列表
+  useEffect(() => {
+    getCampusList().then((res) => {
+      setCampusOptions(
+        (res.list || []).map((c: { name: string; id: number }) => ({ label: c.name, value: c.id }))
+      );
+    }).catch(() => {});
+  }, []);
 
   const [queryParams, setQueryParams] = useState<LeadQueryParams>({
     page: 1,
@@ -105,8 +115,8 @@ export function Component() {
       const res = await getLeadList(queryParams);
       setDataSource(res.list);
       setTotal(res.total);
-    } catch (error: any) {
-      message.error(error.message || '加载失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加载失败');
     } finally {
       setLoading(false);
     }
@@ -117,7 +127,7 @@ export function Component() {
     try {
       const res = await getAdvisorList();
       setAdvisorList(res);
-    } catch (error: any) {
+    } catch {
       message.error('加载顾问列表失败');
     }
   };
@@ -131,7 +141,7 @@ export function Component() {
   }, []);
 
   // 搜索
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: Partial<LeadQueryParams>) => {
     setQueryParams({
       ...queryParams,
       page: 1,
@@ -153,8 +163,8 @@ export function Component() {
       await deleteLead(id);
       message.success('删除成功');
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '删除失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -177,8 +187,8 @@ export function Component() {
       setSelectedRowKeys([]);
       form.resetFields();
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '分配失败');
     }
   };
 
@@ -201,8 +211,8 @@ export function Component() {
       setSelectedRowKeys([]);
       autoAssignForm.resetFields();
       loadData();
-    } catch (error: any) {
-      message.error(error.message || '自动分配失败');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '自动分配失败');
     }
   };
 
@@ -234,7 +244,11 @@ export function Component() {
       dataIndex: 'gender',
       key: 'gender',
       width: 60,
-      render: (gender: number) => (gender === 1 ? '男' : gender === 2 ? '女' : '未知'),
+      render: (gender: number | string) => {
+        if (gender === 1 || gender === '1' || gender === 'male') return '男';
+        if (gender === 2 || gender === '2' || gender === 'female') return '女';
+        return '未知';
+      },
     },
     {
       title: '年龄',
@@ -322,7 +336,7 @@ export function Component() {
       key: 'action',
       width: 150,
       fixed: 'right',
-      render: (_: any, record: Lead) => (
+      render: (_: unknown, record: Lead) => (
         <Space size="small">
           <Button type="link" size="small" onClick={() => navigate(`/marketing/lead/${record.id}`)}>
             详情
@@ -524,15 +538,11 @@ export function Component() {
             rules={[{ required: true, message: '请选择校区' }]}
           >
             <Select placeholder="请选择校区">
-              {/* 这里应该从校区列表中获取，暂时使用顾问的校区 */}
-              {Array.from(new Set(advisorList.map((a) => a.campusId))).map((campusId) => {
-                const advisor = advisorList.find((a) => a.campusId === campusId);
-                return (
-                  <Select.Option key={campusId} value={campusId}>
-                    {advisor?.campusName || `校区 ${campusId}`}
-                  </Select.Option>
-                );
-              })}
+              {campusOptions.map((opt) => (
+                <Select.Option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Select.Option>
+              ))}
             </Select>
           </Form.Item>
           <div style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 12 }}>
